@@ -79,22 +79,7 @@ const servers: ServerOption[] = [
 export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, episode }: VideoPlayerProps) {
   const [selectedServer, setSelectedServer] = useState(servers[0]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showControls, setShowControls] = useState(true);
-  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout>();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    return () => {
-      if (controlsTimeout) clearTimeout(controlsTimeout);
-    };
-  }, [controlsTimeout]);
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeout) clearTimeout(controlsTimeout);
-    const timeout = setTimeout(() => setShowControls(false), 3000);
-    setControlsTimeout(timeout);
-  };
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -126,24 +111,17 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
   const videoUrl = selectedServer.getUrl({ tmdbId, imdbId, type, season, episode });
 
   return (
-    <div 
-      className="relative aspect-video bg-black"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setShowControls(false)}
-    >
-      <iframe
-        ref={iframeRef}
-        src={videoUrl}
-        className="w-full h-full"
-        allowFullScreen
-      />
+    <div className="space-y-4">
+      <div className="aspect-video bg-black">
+        <iframe
+          ref={iframeRef}
+          src={videoUrl}
+          className="w-full h-full"
+          allowFullScreen
+        />
+      </div>
 
-      <motion.div 
-        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: showControls ? 1 : 0 }}
-        transition={{ duration: 0.2 }}
-      >
+      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border border-border rounded-md p-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <button
@@ -170,7 +148,7 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
               value={selectedServer.name}
               onValueChange={handleServerChange}
             >
-              <SelectTrigger className="w-[180px] bg-black/50">
+              <SelectTrigger className="w-[180px]">
                 <Server className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -191,7 +169,7 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
             <Maximize className="h-6 w-6" />
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

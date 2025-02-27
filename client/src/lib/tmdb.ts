@@ -3,8 +3,13 @@ import type { TMDBSearchResult } from "@shared/schema";
 const TMDB_API_KEY = "43e5f570f85114b7a746c37aa6307b25";
 const BASE_URL = "https://api.themoviedb.org/3";
 
-async function tmdbFetch(endpoint: string): Promise<any> {
-  const res = await fetch(`${BASE_URL}${endpoint}?api_key=${TMDB_API_KEY}`);
+async function tmdbFetch(endpoint: string, params?: Record<string, string>): Promise<any> {
+  const searchParams = new URLSearchParams({
+    api_key: TMDB_API_KEY,
+    ...params
+  });
+
+  const res = await fetch(`${BASE_URL}${endpoint}?${searchParams}`);
   if (!res.ok) throw new Error("Failed to fetch from TMDB");
   return res.json();
 }
@@ -32,5 +37,10 @@ export async function getContentRecommendations(id: string, type?: string): Prom
 }
 
 export async function searchContent(query: string): Promise<TMDBSearchResult> {
-  return tmdbFetch(`/search/multi?query=${encodeURIComponent(query)}`);
+  return tmdbFetch("/search/multi", {
+    query: query,
+    include_adult: "false",
+    language: "en-US",
+    page: "1"
+  });
 }
