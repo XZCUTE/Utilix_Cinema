@@ -30,7 +30,9 @@ export async function getPopularTVShows(): Promise<TMDBSearchResult> {
 
 export async function getContentDetails(id: string, type?: string): Promise<any> {
   const mediaType = type || "movie";
-  return tmdbFetch(`/${mediaType}/${id}`);
+  return tmdbFetch(`/${mediaType}/${id}`, {
+    append_to_response: "videos,credits"
+  });
 }
 
 export async function getContentRecommendations(id: string, type?: string): Promise<TMDBSearchResult> {
@@ -43,10 +45,22 @@ export async function searchContent(query: string): Promise<TMDBSearchResult> {
     return { page: 1, results: [], total_pages: 0, total_results: 0 };
   }
 
-  // Search across movies, TV shows, and people
-  return tmdbFetch("/search/multi", {
-    query: query.trim(),
-    include_adult: "false",
-    page: "1"
-  });
+  // Search across movies, TV shows, and people with better params
+  const [moviesRes, tvRes] = await Promise.all([
+    tmdbFetch("/search/movie", { query: query.trim() }),
+    tmdbFetch("/search/tv", { query: query.trim() })
+  ]);
+
+  // Combine and deduplicate results
+  const results = [
+    ...moviesRes.results.map((item: any) => ({ ...item, media_type: 'movie' })),
+    ...tvRes.results.map((item: any) => ({ ...item, media_type: 'tv' }))
+  ];
+
+  return {
+    page: 1,
+    results,
+    total_pages: Math.max(moviesRes.total_pages, tvRes.total_pages),
+    total_results: results.length
+  };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { searchContent } from "@/lib/tmdb";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import type { TMDBContent } from "@shared/schema";
 
-type MediaType = "all" | "movie" | "tv" | "anime";
+type MediaType = "all" | "movie" | "tv";
 
 export default function Search() {
   const [location] = useLocation();
@@ -23,7 +23,7 @@ export default function Search() {
   const searchParams = new URLSearchParams(location.split("?")[1]);
   const query = searchParams.get("q") || "";
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ["/api/search", query],
     queryFn: () => searchContent(query),
     enabled: !!query.trim(),
@@ -31,28 +31,19 @@ export default function Search() {
 
   const filteredResults = data?.results?.filter(item => {
     if (mediaFilter === "all") return true;
-    if (mediaFilter === "movie") return item.media_type === "movie";
-    if (mediaFilter === "tv") return item.media_type === "tv";
-    if (mediaFilter === "anime") {
-      return (
-        item.title?.toLowerCase().includes("anime") ||
-        item.name?.toLowerCase().includes("anime") ||
-        (item.genre_ids && item.genre_ids.includes(16)) // Animation genre ID
-      );
-    }
-    return true;
+    return item.media_type === mediaFilter;
   }) || [];
 
   if (!query.trim()) {
     return (
       <div className="container mx-auto px-4 pt-24">
         <h1 className="text-2xl font-bold mb-4">Search</h1>
-        <p className="text-gray-400">Enter a search term in the search bar above to find movies, TV shows, and anime.</p>
+        <p className="text-gray-400">Enter a search term in the search bar above to find movies and TV shows.</p>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <div className="container mx-auto px-4 pt-24">
         <h1 className="text-2xl font-bold mb-8">Searching for "{query}"...</h1>
@@ -97,7 +88,6 @@ export default function Search() {
             <SelectItem value="all">All Content</SelectItem>
             <SelectItem value="movie">Movies</SelectItem>
             <SelectItem value="tv">TV Shows</SelectItem>
-            <SelectItem value="anime">Anime</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -110,7 +100,7 @@ export default function Search() {
       ) : (
         <div className="text-center py-12">
           <p className="text-gray-400 mb-2">No results found for "{query}"</p>
-          <p className="text-sm text-gray-500">Try different keywords or remove some filters</p>
+          <p className="text-sm text-gray-500">Try different keywords or remove filters</p>
         </div>
       )}
     </div>
