@@ -6,6 +6,8 @@ const BASE_URL = "https://api.themoviedb.org/3";
 async function tmdbFetch(endpoint: string, params?: Record<string, string>): Promise<any> {
   const searchParams = new URLSearchParams({
     api_key: TMDB_API_KEY,
+    language: "en-US",
+    include_adult: "false",
     ...params
   });
 
@@ -37,12 +39,14 @@ export async function getContentRecommendations(id: string, type?: string): Prom
 }
 
 export async function searchContent(query: string): Promise<TMDBSearchResult> {
-  if (!query.trim()) return { page: 1, results: [], total_pages: 0, total_results: 0 };
+  if (!query.trim()) {
+    return { page: 1, results: [], total_pages: 0, total_results: 0 };
+  }
 
+  // Search across movies, TV shows, and people
   return tmdbFetch("/search/multi", {
     query: query.trim(),
     include_adult: "false",
-    language: "en-US",
     page: "1"
   });
 }

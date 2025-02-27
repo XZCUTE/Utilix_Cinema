@@ -4,13 +4,16 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
 export default function Navbar() {
-  const [location, navigate] = useLocation();
+  const [_, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      const encodedQuery = encodeURIComponent(searchQuery.trim());
+      navigate(`/search?q=${encodedQuery}`);
+      // Clear the search input after navigation
+      setSearchQuery("");
     }
   };
 
@@ -23,7 +26,7 @@ export default function Navbar() {
               <Film className="h-6 w-6" />
               <span className="font-bold text-lg">Utilix Cinema</span>
             </Link>
-            
+
             <div className="hidden md:flex items-center gap-6">
               <Link href="/" className="flex items-center gap-2 hover:text-primary transition-colors">
                 <Home className="h-4 w-4" />
@@ -39,12 +42,16 @@ export default function Navbar() {
           <form onSubmit={handleSearch} className="flex items-center gap-2">
             <Input
               type="search"
-              placeholder="Search movies & shows..."
+              placeholder="Search movies, TV shows & anime..."
               className="w-[200px] md:w-[300px]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button type="submit" className="p-2 hover:text-primary transition-colors">
+            <button 
+              type="submit" 
+              className="p-2 hover:text-primary transition-colors"
+              disabled={!searchQuery.trim()}
+            >
               <Search className="h-5 w-5" />
             </button>
           </form>

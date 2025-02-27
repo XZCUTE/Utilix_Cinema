@@ -47,7 +47,7 @@ export default function Search() {
     return (
       <div className="container mx-auto px-4 pt-24">
         <h1 className="text-2xl font-bold mb-4">Search</h1>
-        <p className="text-gray-400">Enter a search term in the search bar above.</p>
+        <p className="text-gray-400">Enter a search term in the search bar above to find movies, TV shows, and anime.</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function Search() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 pt-24">
-        <Skeleton className="h-8 w-64 mb-8" />
+        <h1 className="text-2xl font-bold mb-8">Searching for "{query}"...</h1>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {[...Array(12)].map((_, i) => (
             <Skeleton key={i} className="aspect-[2/3]" />
@@ -69,7 +69,7 @@ export default function Search() {
     return (
       <div className="container mx-auto px-4 pt-24">
         <h1 className="text-2xl font-bold mb-4">Error</h1>
-        <p className="text-red-500">Failed to load search results. Please try again.</p>
+        <p className="text-red-500">An error occurred while searching. Please try again.</p>
       </div>
     );
   }
@@ -77,9 +77,14 @@ export default function Search() {
   return (
     <div className="container mx-auto px-4 pt-24">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">
-          Search Results for "{query}"
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold mb-2">
+            Search Results for "{query}"
+          </h1>
+          <p className="text-gray-400">
+            Found {filteredResults.length} results
+          </p>
+        </div>
 
         <Select
           value={mediaFilter}
@@ -103,7 +108,10 @@ export default function Search() {
           items={filteredResults}
         />
       ) : (
-        <p className="text-gray-400">No results found for "{query}"</p>
+        <div className="text-center py-12">
+          <p className="text-gray-400 mb-2">No results found for "{query}"</p>
+          <p className="text-sm text-gray-500">Try different keywords or remove some filters</p>
+        </div>
       )}
     </div>
   );
