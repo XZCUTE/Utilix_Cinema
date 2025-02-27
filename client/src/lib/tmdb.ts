@@ -16,6 +16,31 @@ async function tmdbFetch(endpoint: string, params?: Record<string, string>): Pro
   return res.json();
 }
 
+export async function searchContent(query: string): Promise<TMDBSearchResult> {
+  if (!query.trim()) {
+    return { page: 1, results: [], total_pages: 0, total_results: 0 };
+  }
+
+  // Search across movies and TV shows
+  const [moviesRes, tvRes] = await Promise.all([
+    tmdbFetch("/search/movie", { query }),
+    tmdbFetch("/search/tv", { query })
+  ]);
+
+  // Combine results and add media_type
+  const results = [
+    ...moviesRes.results.map((item: any) => ({ ...item, media_type: "movie" })),
+    ...tvRes.results.map((item: any) => ({ ...item, media_type: "tv" }))
+  ];
+
+  return {
+    page: 1,
+    results,
+    total_pages: Math.max(moviesRes.total_pages, tvRes.total_pages),
+    total_results: results.length
+  };
+}
+
 export async function getTrending(): Promise<TMDBSearchResult> {
   return tmdbFetch("/trending/all/day");
 }
@@ -38,29 +63,4 @@ export async function getContentDetails(id: string, type?: string): Promise<any>
 export async function getContentRecommendations(id: string, type?: string): Promise<TMDBSearchResult> {
   const mediaType = type || "movie";
   return tmdbFetch(`/${mediaType}/${id}/recommendations`);
-}
-
-export async function searchContent(query: string): Promise<TMDBSearchResult> {
-  if (!query.trim()) {
-    return { page: 1, results: [], total_pages: 0, total_results: 0 };
-  }
-
-  // Search across movies, TV shows, and people with better params
-  const [moviesRes, tvRes] = await Promise.all([
-    tmdbFetch("/search/movie", { query: query.trim() }),
-    tmdbFetch("/search/tv", { query: query.trim() })
-  ]);
-
-  // Combine and deduplicate results
-  const results = [
-    ...moviesRes.results.map((item: any) => ({ ...item, media_type: 'movie' })),
-    ...tvRes.results.map((item: any) => ({ ...item, media_type: 'tv' }))
-  ];
-
-  return {
-    page: 1,
-    results,
-    total_pages: Math.max(moviesRes.total_pages, tvRes.total_pages),
-    total_results: results.length
-  };
 }

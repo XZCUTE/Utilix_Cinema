@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { TMDBContent } from "@shared/schema";
 
 type MediaType = "all" | "movie" | "tv";
 
@@ -20,13 +19,13 @@ export default function Search() {
   const [mediaFilter, setMediaFilter] = useState<MediaType>("all");
 
   // Get search query from URL
-  const searchParams = new URLSearchParams(location.split("?")[1]);
-  const query = searchParams.get("q") || "";
+  const params = new URLSearchParams(window.location.search);
+  const query = params.get("q") || "";
 
-  const { data, isLoading, error, isFetching } = useQuery({
-    queryKey: ["/api/search", query],
+  const { data, isLoading } = useQuery({
+    queryKey: ["search", query],
     queryFn: () => searchContent(query),
-    enabled: !!query.trim(),
+    enabled: !!query
   });
 
   const filteredResults = data?.results?.filter(item => {
@@ -34,16 +33,16 @@ export default function Search() {
     return item.media_type === mediaFilter;
   }) || [];
 
-  if (!query.trim()) {
+  if (!query) {
     return (
       <div className="container mx-auto px-4 pt-24">
         <h1 className="text-2xl font-bold mb-4">Search</h1>
-        <p className="text-gray-400">Enter a search term in the search bar above to find movies and TV shows.</p>
+        <p className="text-gray-400">Enter a search term to find movies and TV shows.</p>
       </div>
     );
   }
 
-  if (isLoading || isFetching) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 pt-24">
         <h1 className="text-2xl font-bold mb-8">Searching for "{query}"...</h1>
@@ -52,15 +51,6 @@ export default function Search() {
             <Skeleton key={i} className="aspect-[2/3]" />
           ))}
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 pt-24">
-        <h1 className="text-2xl font-bold mb-4">Error</h1>
-        <p className="text-red-500">An error occurred while searching. Please try again.</p>
       </div>
     );
   }

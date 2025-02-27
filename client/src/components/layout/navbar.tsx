@@ -1,19 +1,17 @@
-import { Link, useLocation } from "wouter";
-import { Search, Film, Home, TrendingUp } from "lucide-react";
+import { Link } from "wouter";
+import { Search, Film, Home } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
 export default function Navbar() {
-  const [_, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      const encodedQuery = encodeURIComponent(searchQuery.trim());
-      navigate(`/search?q=${encodedQuery}`);
-      // Clear the search input after navigation
-      setSearchQuery("");
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery) {
+      // Use window.location.href to ensure full page reload with search params
+      window.location.href = `/search?q=${encodeURIComponent(trimmedQuery)}`;
     }
   };
 
@@ -31,10 +29,6 @@ export default function Navbar() {
               <Link href="/" className="flex items-center gap-2 hover:text-primary transition-colors">
                 <Home className="h-4 w-4" />
                 <span>Home</span>
-              </Link>
-              <Link href="/trending" className="flex items-center gap-2 hover:text-primary transition-colors">
-                <TrendingUp className="h-4 w-4" />
-                <span>Trending</span>
               </Link>
             </div>
           </div>
