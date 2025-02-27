@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { searchContent } from "@/lib/tmdb";
@@ -17,22 +17,40 @@ type MediaType = "all" | "movie" | "tv" | "anime";
 
 export default function Search() {
   const [location] = useLocation();
-  const query = new URLSearchParams(location.split("?")[1]).get("q") || "";
   const [mediaFilter, setMediaFilter] = useState<MediaType>("all");
 
-  const { data, isLoading } = useQuery({
+  // Get search query from URL
+  const searchParams = new URLSearchParams(location.split("?")[1]);
+  const query = searchParams.get("q") || "";
+
+  const { data, isLoading, error } = useQuery({
     queryKey: ["/api/search", query],
     queryFn: () => searchContent(query),
-    enabled: !!query
+    enabled: !!query.trim(),
   });
 
-  const filteredResults = data?.results.filter(item => {
+  const filteredResults = data?.results?.filter(item => {
     if (mediaFilter === "all") return true;
     if (mediaFilter === "movie") return item.media_type === "movie";
     if (mediaFilter === "tv") return item.media_type === "tv";
-    if (mediaFilter === "anime") return item.title?.toLowerCase().includes("anime");
+    if (mediaFilter === "anime") {
+      return (
+        item.title?.toLowerCase().includes("anime") ||
+        item.name?.toLowerCase().includes("anime") ||
+        (item.genre_ids && item.genre_ids.includes(16)) // Animation genre ID
+      );
+    }
     return true;
-  });
+  }) || [];
+
+  if (!query.trim()) {
+    return (
+      <div className="container mx-auto px-4 pt-24">
+        <h1 className="text-2xl font-bold mb-4">Search</h1>
+        <p className="text-gray-400">Enter a search term in the search bar above.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -43,6 +61,15 @@ export default function Search() {
             <Skeleton key={i} className="aspect-[2/3]" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 pt-24">
+        <h1 className="text-2xl font-bold mb-4">Error</h1>
+        <p className="text-red-500">Failed to load search results. Please try again.</p>
       </div>
     );
   }
@@ -70,13 +97,13 @@ export default function Search() {
         </Select>
       </div>
 
-      {filteredResults?.length ? (
+      {filteredResults.length > 0 ? (
         <ContentGrid
           title=""
           items={filteredResults}
         />
       ) : (
-        <p className="text-gray-400">No results found</p>
+        <p className="text-gray-400">No results found for "{query}"</p>
       )}
     </div>
   );

@@ -37,8 +37,10 @@ export async function getContentRecommendations(id: string, type?: string): Prom
 }
 
 export async function searchContent(query: string): Promise<TMDBSearchResult> {
+  if (!query.trim()) return { page: 1, results: [], total_pages: 0, total_results: 0 };
+
   return tmdbFetch("/search/multi", {
-    query: query,
+    query: query.trim(),
     include_adult: "false",
     language: "en-US",
     page: "1"
