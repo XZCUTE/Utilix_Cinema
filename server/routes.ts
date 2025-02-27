@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express) {
       const type = req.query.type || "movie";
 
       const response = await fetch(
-        `https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}`
+        `https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&append_to_response=videos,credits`
       );
       if (!response.ok) throw new Error(`Failed to fetch ${type} details`);
       const data = await response.json();
@@ -85,20 +85,35 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      const searchParams = new URLSearchParams({
-        api_key: TMDB_API_KEY,
-        query: query as string,
-        include_adult: "false",
-        language: "en-US",
-        page: "1"
-      });
+      // Make multiple search requests to cover movies, TV shows and anime
+      const [moviesRes, tvRes, multiRes] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${query}&include_adult=false`),
+        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${query}&include_adult=false`),
+        fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${query}&include_adult=false`)
+      ]);
 
-      const response = await fetch(
-        `https://api.themoviedb.org/3/search/multi?${searchParams}`
-      );
-      if (!response.ok) throw new Error("Failed to search content");
-      const data = await response.json();
-      res.json(data);
+      const [movies, tv, multi] = await Promise.all([
+        moviesRes.json(),
+        tvRes.json(),
+        multiRes.json()
+      ]);
+
+      // Combine and deduplicate results
+      const results = [...movies.results, ...tv.results, ...multi.results]
+        .filter((item, index, self) => 
+          index === self.findIndex((t) => t.id === item.id)
+        )
+        .map(item => ({
+          ...item,
+          media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie')
+        }));
+
+      res.json({
+        page: 1,
+        results,
+        total_pages: Math.max(movies.total_pages, tv.total_pages, multi.total_pages),
+        total_results: results.length
+      });
     } catch (error) {
       res.status(500).json({ message: "Failed to search content" });
     }

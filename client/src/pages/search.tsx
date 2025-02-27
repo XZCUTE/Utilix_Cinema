@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TMDBContent } from "@shared/schema";
+import type { TMDBContent } from "@shared/schema";
 
 type MediaType = "all" | "movie" | "tv" | "anime";
 
