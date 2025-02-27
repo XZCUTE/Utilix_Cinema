@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Maximize, SkipForward, Server } from "lucide-react";
 import { motion } from "framer-motion";
 import { 
@@ -12,33 +12,89 @@ import {
 interface VideoPlayerProps {
   tmdbId: string;
   imdbId?: string;
+  type?: string;
+  season?: number;
+  episode?: number;
 }
 
 interface ServerOption {
   name: string;
-  getUrl: (ids: { tmdbId: string; imdbId?: string }) => string;
+  getUrl: (params: { 
+    tmdbId: string; 
+    imdbId?: string;
+    type?: string;
+    season?: number;
+    episode?: number;
+  }) => string;
 }
 
 const servers: ServerOption[] = [
   {
     name: "VidSrc",
-    getUrl: ({ tmdbId }) => `https://vidsrc.cc/v2/embed/movie/${tmdbId}`,
+    getUrl: ({ tmdbId, type, season, episode }) => {
+      if (type === "tv" && season && episode) {
+        return `https://vidsrc.cc/v2/embed/tv/${tmdbId}/${season}/${episode}`;
+      } else if (type === "tv") {
+        return `https://vidsrc.cc/v2/embed/tv/${tmdbId}`;
+      } else if (type === "anime" && episode) {
+        return `https://vidsrc.cc/v2/embed/anime/${tmdbId}/${episode}/sub`;
+      }
+      return `https://vidsrc.cc/v2/embed/movie/${tmdbId}`;
+    },
   },
   {
     name: "2Embed",
-    getUrl: ({ tmdbId }) => `https://www.2embed.stream/embed/movie/${tmdbId}`,
+    getUrl: ({ tmdbId, type, season, episode }) => {
+      if (type === "tv" && season && episode) {
+        return `https://www.2embed.stream/embed/tv/${tmdbId}/${season}/${episode}`;
+      }
+      return `https://www.2embed.stream/embed/movie/${tmdbId}`;
+    },
   },
   {
     name: "AutoEmbed",
-    getUrl: ({ tmdbId }) => `https://autoembed.co/movie/tmdb/${tmdbId}`,
+    getUrl: ({ tmdbId, imdbId, type, season, episode }) => {
+      const id = imdbId || tmdbId;
+      const idType = imdbId ? "imdb" : "tmdb";
+
+      if (type === "tv" && season && episode) {
+        return `https://autoembed.co/tv/${idType}/${id}-${season}-${episode}`;
+      }
+      return `https://autoembed.co/movie/${idType}/${id}`;
+    },
+  },
+  {
+    name: "VidSrc v3",
+    getUrl: ({ tmdbId, type, season, episode }) => {
+      if (type === "tv" && season && episode) {
+        return `https://vidsrc.cc/v3/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=false`;
+      } else if (type === "tv") {
+        return `https://vidsrc.cc/v3/embed/tv/${tmdbId}?autoPlay=false`;
+      }
+      return `https://vidsrc.cc/v3/embed/movie/${tmdbId}?autoPlay=false`;
+    },
   },
 ];
 
-export default function VideoPlayer({ tmdbId, imdbId }: VideoPlayerProps) {
+export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, episode }: VideoPlayerProps) {
   const [selectedServer, setSelectedServer] = useState(servers[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout>();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (controlsTimeout) clearTimeout(controlsTimeout);
+    };
+  }, [controlsTimeout]);
+
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (controlsTimeout) clearTimeout(controlsTimeout);
+    const timeout = setTimeout(() => setShowControls(false), 3000);
+    setControlsTimeout(timeout);
+  };
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -67,12 +123,12 @@ export default function VideoPlayer({ tmdbId, imdbId }: VideoPlayerProps) {
     }
   };
 
-  const videoUrl = selectedServer.getUrl({ tmdbId, imdbId });
+  const videoUrl = selectedServer.getUrl({ tmdbId, imdbId, type, season, episode });
 
   return (
     <div 
       className="relative aspect-video bg-black"
-      onMouseEnter={() => setShowControls(true)}
+      onMouseMove={handleMouseMove}
       onMouseLeave={() => setShowControls(false)}
     >
       <iframe
