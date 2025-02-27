@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Maximize, SkipForward, Server } from "lucide-react";
+import { Play, Pause, Maximize, SkipForward, Server, Tv } from "lucide-react";
 import { motion } from "framer-motion";
 import { 
   Select,
@@ -80,6 +80,10 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
   const [selectedServer, setSelectedServer] = useState(servers[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // Convert season and episode to numbers if they're provided as strings
+  const seasonNum = season ? Number(season) : undefined;
+  const episodeNum = episode ? Number(episode) : undefined;
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -108,7 +112,13 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
     }
   };
 
-  const videoUrl = selectedServer.getUrl({ tmdbId, imdbId, type, season, episode });
+  const videoUrl = selectedServer.getUrl({ 
+    tmdbId, 
+    imdbId, 
+    type, 
+    season: seasonNum, 
+    episode: episodeNum 
+  });
 
   return (
     <div className="space-y-4">
@@ -122,7 +132,7 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
       </div>
 
       <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border border-border rounded-md p-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <button
               onClick={handlePlayPause}
@@ -142,6 +152,46 @@ export default function VideoPlayer({ tmdbId, imdbId, type = "movie", season, ep
               <SkipForward className="h-6 w-6" />
             </button>
           </div>
+          
+          {type === "tv" && (
+            <div className="flex items-center gap-4">
+              <div>
+                <Select 
+                  value={season?.toString() || "1"} 
+                  onValueChange={(val) => window.location.href = `/details/${tmdbId}?type=tv&season=${val}&episode=${episode || 1}`}
+                >
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                      <SelectItem key={`season-${num}`} value={num.toString()}>
+                        Season {num}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Select 
+                  value={episode?.toString() || "1"} 
+                  onValueChange={(val) => window.location.href = `/details/${tmdbId}?type=tv&season=${season || 1}&episode=${val}`}
+                >
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Episode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
+                      <SelectItem key={`episode-${num}`} value={num.toString()}>
+                        Episode {num}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 flex items-center">
             <Select
