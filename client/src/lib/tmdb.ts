@@ -26,6 +26,11 @@ export async function getContentDetails(id: string, type?: string): Promise<any>
   return tmdbFetch(`/${mediaType}/${id}`);
 }
 
+export async function getContentRecommendations(id: string, type?: string): Promise<TMDBSearchResult> {
+  const mediaType = type || "movie";
+  return tmdbFetch(`/${mediaType}/${id}/recommendations`);
+}
+
 export async function searchContent(query: string): Promise<TMDBSearchResult> {
   return tmdbFetch(`/search/multi?query=${encodeURIComponent(query)}`);
 }

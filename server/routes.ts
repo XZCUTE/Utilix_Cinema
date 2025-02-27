@@ -38,6 +38,14 @@ export async function registerRoutes(app: Express) {
     res.json(data);
   });
 
+  app.get("/api/content/:id/recommendations", async (req, res) => {
+    const response = await fetch(
+      `https://api.themoviedb.org/3/movie/${req.params.id}/recommendations?api_key=43e5f570f85114b7a746c37aa6307b25`
+    );
+    const data = await response.json();
+    res.json(data);
+  });
+
   app.get("/api/search", async (req, res) => {
     const query = req.query.q;
     const response = await fetch(
