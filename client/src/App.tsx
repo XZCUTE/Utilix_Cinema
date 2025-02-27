@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/navbar";
 import Home from "@/pages/home";
 import Details from "@/pages/details";
 import Search from "@/pages/search";
+import Anime from "@/pages/anime";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/content/:id" component={Details} />
           <Route path="/search" component={Search} />
+          <Route path="/anime" component={Anime} />
           <Route component={NotFound} />
         </Switch>
       </main>

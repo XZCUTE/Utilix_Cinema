@@ -64,3 +64,44 @@ export async function getContentRecommendations(id: string, type?: string): Prom
   const mediaType = type || "movie";
   return tmdbFetch(`/${mediaType}/${id}/recommendations`);
 }
+
+// New anime-specific functions
+export async function getTrendingAnime(): Promise<TMDBSearchResult> {
+  // Using animation genre_id=16 to filter anime content
+  return tmdbFetch("/discover/tv", {
+    with_genres: "16",
+    sort_by: "popularity.desc",
+    with_original_language: "ja"
+  });
+}
+
+export async function getPopularAnime(): Promise<TMDBSearchResult> {
+  return tmdbFetch("/discover/tv", {
+    with_genres: "16",
+    sort_by: "vote_count.desc",
+    with_original_language: "ja"
+  });
+}
+
+export async function getTopRatedAnime(): Promise<TMDBSearchResult> {
+  return tmdbFetch("/discover/tv", {
+    with_genres: "16",
+    sort_by: "vote_average.desc",
+    "vote_count.gte": "100", //Fixed typo here
+    with_original_language: "ja"
+  });
+}
+
+export async function getSeasonalAnime(): Promise<TMDBSearchResult> {
+  const date = new Date();
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 3, 0);
+
+  return tmdbFetch("/discover/tv", {
+    with_genres: "16",
+    "air_date.gte": firstDay.toISOString().split('T')[0],
+    "air_date.lte": lastDay.toISOString().split('T')[0],
+    with_original_language: "ja",
+    sort_by: "popularity.desc"
+  });
+}

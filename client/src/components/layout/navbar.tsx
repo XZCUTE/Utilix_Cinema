@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Search, Film, Home } from "lucide-react";
+import { Search, Film, Home, Tv } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
@@ -10,7 +10,6 @@ export default function Navbar() {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
     if (trimmedQuery) {
-      // Use window.location.href to ensure full page reload with search params
       window.location.href = `/search?q=${encodeURIComponent(trimmedQuery)}`;
     }
   };
@@ -29,6 +28,10 @@ export default function Navbar() {
               <Link href="/" className="flex items-center gap-2 hover:text-primary transition-colors">
                 <Home className="h-4 w-4" />
                 <span>Home</span>
+              </Link>
+              <Link href="/anime" className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Tv className="h-4 w-4" />
+                <span>Anime</span>
               </Link>
             </div>
           </div>
