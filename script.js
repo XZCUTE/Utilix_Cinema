@@ -19,7 +19,7 @@ let currentImages = [
     'jpeg24.jpeg', 'jpeg25.jpeg', 'jpeg26.jpeg', 'jpeg27.jpeg', 'jpeg28.jpeg', 'jpeg29.jpeg',
     'jpeg30.jpeg', 'jpeg31.jpeg', 'jpeg32.jpeg', 'jpeg33.jpeg', 'jpeg34.jpeg', 'jpeg35.jpeg',
     'jpeg36.jpeg', 'jpeg37.jpeg', 'jpeg38.jpeg', 'jpeg39.jpeg', 'jpeg40.jpeg',
-    'png.jpeg', 'png1.jpeg',
+    '1.jpeg', '2.jpeg',
     'UC.webp', 'UC1.webp', 'UC2.webp', 'UC3.webp', 'UC4.webp', 'UC5.webp', 'UC6.webp'
 ];
 let currentImageIndex = 0;
