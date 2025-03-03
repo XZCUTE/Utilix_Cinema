@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTILIX CINEMA</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Google Cast SDK -->
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+</head>
+<body>
+    <div id="namePrompt" class="name-prompt" style="display: none;">
+        <h2>Enter Your Name</h2>
+        <input type="text" id="userName" placeholder="Your Name" aria-label="Enter your name">
+        <button onclick="saveName()" aria-label="Submit Name">Submit</button>
+    </div>
+    <header>
+        <div class="logo">UTILIX CINEMA</div>
+        <nav class="main-nav">
+            <button id="movieMode" class="nav-btn active" aria-label="Movies" onclick="switchMode('movie')">Movies</button>
+            <button id="animeMode" class="nav-btn" aria-label="Anime" onclick="switchMode('anime')">Animation</button>
+            <button id="libraryMode" class="nav-btn" aria-label="Library" onclick="switchMode('library')">Library</button>
+            <button class="categories-toggle" aria-label="Toggle Categories" onclick="toggleCategoriesPopup()">Categories ▼</button>
+            <button class="menu-toggle" aria-label="Toggle Menu" onclick="toggleSidebar()">☰</button>
+        </nav>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search..." aria-label="Search movies or anime" oninput="showSuggestions(this.value)">
+            <div id="suggestions" class="suggestions"></div>
+            <button onclick="searchContent()" aria-label="Search">🔍</button>
+        </div>
+        <button id="settingsBtn" class="settings-btn" aria-label="Settings" onclick="openSettings()">⚙️</button>
+    </header>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <h3>Categories</h3>
+            <ul id="movieNav" class="category-list">
+                <li><a href="#" onclick="loadCategory('action')">Action</a></li>
+                <li><a href="#" onclick="loadCategory('adventure')">Adventure</a></li>
+                <li><a href="#" onclick="loadCategory('comedy')">Comedy</a></li>
+                <li><a href="#" onclick="loadCategory('drama')">Drama</a></li>
+                <li><a href="#" onclick="loadCategory('horror')">Horror</a></li>
+                <li><a href="#" onclick="loadCategory('thriller')">Thriller</a></li>
+                <li><a href="#" onclick="loadCategory('mystery')">Mystery</a></li>
+                <li><a href="#" onclick="loadCategory('sci-fi')">Sci-Fi</a></li>
+                <li><a href="#" onclick="loadCategory('fantasy')">Fantasy</a></li>
+                <li><a href="#" onclick="loadCategory('romance')">Romance</a></li>
+                <li><a href="#" onclick="loadCategory('animation')">Animation</a></li>
+                <li><a href="#" onclick="loadCategory('documentary')">Documentary</a></li>
+                <li><a href="#" onclick="loadCategory('musical')">Musical</a></li>
+                <li><a href="#" onclick="loadCategory('crime')">Crime</a></li>
+                <li><a href="#" onclick="loadCategory('war')">War</a></li>
+                <li><a href="#" onclick="loadCategory('western')">Western</a></li>
+            </ul>
+        </div>
+    </aside>
+    <main>
+        <section id="movieSection" class="content-section">
+            <h2>Movies</h2>
+            <div id="movieGrid" class="content-grid"></div>
+        </section>
+        <section id="tvSection" class="content-section">
+            <h2>TV Shows</h2>
+            <div id="tvGrid" class="content-grid"></div>
+        </section>
+        <section id="animeSection" class="content-section" style="display: none;">
+            <h2>Animation</h2>
+            <div class="category">
+                <h3>Animated Movies</h3>
+                <div id="animeMovieGrid" class="content-grid"></div>
+            </div>
+            <div class="category">
+                <h3>Animated Series</h3>
+                <div id="animeSeriesGrid" class="content-grid"></div>
+            </div>
+            <div class="category">
+                <h3>Trending Now</h3>
+                <div id="trendingGrid" class="content-grid"></div>
+            </div>
+            <div class="category">
+                <h3>Popular Animation</h3>
+                <div id="popularGrid" class="content-grid"></div>
+            </div>
+            <div class="category">
+                <h3>Recommended For You</h3>
+                <div id="recommendedGrid" class="content-grid"></div>
+            </div>
+            <div class="category">
+                <h3>Top Rated</h3>
+                <div id="topGrid" class="content-grid"></div>
+            </div>
+            <div class="category">
+                <h3>Latest Updated</h3>
+                <div id="latestGrid" class="content-grid"></div>
+            </div>
+        </section>
+        <section id="librarySection" class="content-section" style="display: none;">
+            <h2>Library</h2>
+            <div class="library-grid">
+                <h3>Movies</h3>
+                <div id="libraryMovieGrid" class="content-grid"></div>
+                <h3>Series</h3>
+                <div id="librarySeriesGrid" class="content-grid"></div>
+            </div>
+            <div class="image-selector">
+                <h3>Image Gallery</h3>
+                <div class="image-thumbnails" id="imageThumbnails"></div>
+            </div>
+            <div id="imageViewerModal" class="modal" style="display: none;">
+                <div class="modal-content image-viewer">
+                    <span class="close" aria-label="Close Image Viewer" onclick="closeImageViewer()">×</span>
+                    <img id="viewerImage" class="viewer-image" alt="Image Viewer">
+                    <div class="view-options">
+                        <select id="viewSizeSelect" onchange="changeViewSize()" aria-label="Select View Size">
+                            <option value="normal">Normal View</option>
+                            <option value="good">Good View</option>
+                            <option value="max">Max View</option>
+                        </select>
+                        <button class="nav-button prev" aria-label="Previous Image" onclick="prevImage()">❮</button>
+                        <button class="nav-button next" aria-label="Next Image" onclick="nextImage()">❯</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div id="playerModal" class="modal">
+            <div class="modal-content">
+                <span class="close" aria-label="Close" onclick="closeModal()">×</span>
+                <div class="player-container">
+                    <div class="video-header">
+                        <h2 id="contentTitle" class="video-title"></h2>
+                        <button id="libraryButton" class="library-btn" aria-label="Add to Library" onclick="toggleLibrary(currentContent)">Add to Library</button>
+                    </div>
+                    <div id="videoPlayer" class="video-player"></div>
+                    <div class="video-controls">
+                        <select id="serverSelect" onchange="changeServer()" aria-label="Select Server">
+                            <option value="">Select Server</option>
+                            <option value="vidsrcDev">Server 1 - VidSrc.dev</option>
+                            <option value="vidsrcXyz">Server 2 - VidSrc.xyz - Best for series</option>
+                            <option value="vidsrcCc">Server 3 - VidSrc.cc</option>
+                            <option value="embedSu">Server 4 - Embed.su</option>
+                            <option value="vidlink">Server 5 - VidLink.pro</option>
+                            <option value="vidsrcIcu">Server 6 - VidSrc.icu</option>
+                            <option value="autoembed">Server 7 - AutoEmbed.cc</option>
+                            <option value="vidsrcTo">Server 8 - VidSrc.to</option>
+                        </select>
+                        <select id="episodeSelect" onchange="changeEpisode()" style="display: none;" aria-label="Select Episode">
+                            <option value="">Select Episode</option>
+                        </select>
+                        <div class="control-buttons">
+                            <button onclick="rewindVideo()" aria-label="Rewind 5 seconds">-5s</button>
+                            <button onclick="togglePlayPause()" aria-label="Play or Pause">Play/Pause</button>
+                            <button onclick="forwardVideo()" aria-label="Forward 5 seconds">+5s</button>
+                            <button onclick="toggleFullscreen()" aria-label="Fullscreen">Fullscreen</button>
+                            <button id="castButton" class="control-buttons button" aria-label="Cast Video">Cast</button>
+                            <button id="nextEpisodeBtn" onclick="nextEpisode()" style="display: none;" aria-label="Next Episode">Next Episode</button>
+                        </div>
+                    </div>
+                    <p id="contentDescription" class="video-description"></p>
+                    <div id="recommendations" class="recommendations">
+                        <h3>Recommended</h3>
+                        <div id="recGrid" class="rec-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="settingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" aria-label="Close Settings" onclick="closeSettings()">×</span>
+                <h2>Settings</h2>
+                <div class="settings-content">
+                    <h3>Theme</h3>
+                    <select id="themeSelect" onchange="changeTheme(this.value)" aria-label="Select Theme">
+                        <option value="orange">Fiery Orange</option>
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="purple">Purple</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="pink">Pink</option>
+                        <option value="gray">Gray</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div id="cookieConsent" class="cookie-consent" style="display: none;">
+            <p>We use cookies to enhance your experience. Do you accept?</p>
+            <button onclick="acceptCookies()" aria-label="Accept Cookies">Accept</button>
+            <button onclick="declineCookies()" aria-label="Decline Cookies">Decline</button>
+        </div>
+        <div id="categoriesPopup" class="modal" style="display: none;">
+            <div class="modal-content categories-popup">
+                <span class="close" aria-label="Close Categories" onclick="closeCategoriesPopup()">×</span>
+                <div class="category-buttons">
+                    <button class="category-btn" onclick="loadCategoryAndClose('action')">💥 Action</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('adventure')">🚀 Adventure</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('comedy')">😂 Comedy</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('drama')">🎭 Drama</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('horror')">🧟 Horror</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('thriller')">🕵️‍♂️ Thriller</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('mystery')">🕵️‍♂️ Mystery</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('sci-fi')">👽 Sci-Fi</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('fantasy')">🧚 Fantasy</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('romance')">💖 Romance</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('animation')">🎥 Animation</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('documentary')">🏆 Documentary</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('musical')">🎶 Musical</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('crime')">🔍 Crime</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('war')">⚔️ War</button>
+                    <button class="category-btn" onclick="loadCategoryAndClose('western')">🤠 Western</button>
+                </div>
+            </div>
+        </div>
+        <div id="castDevicePopup" class="modal" style="display: none;">
+            <div class="modal-content cast-device-popup">
+                <span class="close" aria-label="Close Cast Device Selection" onclick="closeCastDevicePopup()">×</span>
+                <h2>Select Device to Cast</h2>
+                <div class="cast-device-list" id="castDeviceList"></div>
+            </div>
+        </div>
+    </main>
+    <div class="random-section">
+        <button class="random-btn" onclick="getRandomMovie()" aria-label="Random Movie">Random Movie</button>
+        <button class="random-btn" onclick="getRandomSeries()" aria-label="Random Series">Random Series</button>
+    </div>
+    <footer>
+        <p>© 2025 UTILIX CINEMA</p>
+        <p>This is a demonstration project designed to showcase functionality. Our website does not host or store any data or media files on our servers. Instead, it aggregates content from third-party sources, providing links to media hosted externally. We do not claim ownership or responsibility for the content provided by these third-party services.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
