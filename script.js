@@ -1,3 +1,19 @@
+// Firebase Configuration (your provided config)
+const firebaseConfig = {
+    apiKey: "AIzaSyAFODTsHwTCpthvJjzs6GQjDBish6r3oQs",
+    authDomain: "utilixcinema.firebaseapp.com",
+    databaseURL: "https://utilixcinema-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "utilixcinema",
+    storageBucket: "utilixcinema.appspot.com",
+    messagingSenderId: "851957022660",
+    appId: "1:851957022660:web:395e193451af05b401ae91",
+    measurementId: "G-T5G9KEN7ZE"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 const TMDB_API_KEY = '43e5f570f85114b7a746c37aa6307b25';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
@@ -23,7 +39,8 @@ let currentImages = [
     'UC.webp', 'UC1.webp', 'UC2.webp', 'UC3.webp', 'UC4.webp', 'UC5.webp', 'UC6.webp'
 ];
 let currentImageIndex = 0;
-let castSession = null;
+let watchTogetherActive = false;
+let roomId = null;
 
 function checkCookieConsent() {
     const consent = Cookies.get('cookieConsent');
@@ -36,7 +53,6 @@ function checkCookieConsent() {
             loadLibrary();
             checkName();
             applyTheme(currentTheme);
-            initializeCast();
         }
         initLibrarySlider();
     }
@@ -51,7 +67,6 @@ function acceptCookies() {
     checkName();
     initLibrarySlider();
     applyTheme(currentTheme);
-    initializeCast();
 }
 
 function declineCookies() {
@@ -91,7 +106,7 @@ function showWelcomeMessage(name) {
     welcomeMessage.style.display = 'block';
     setTimeout(() => {
         welcomeMessage.style.display = 'none';
-    }, 2000); // Display for 2 seconds
+    }, 2000);
 }
 
 function initLibrarySlider() {
@@ -132,7 +147,6 @@ function resetLibraryInterval() {
     startLibrarySlider();
 }
 
-// Keyboard controls for library slider
 document.addEventListener('keydown', (e) => {
     if (currentMode === 'library') {
         if (e.key === 'ArrowLeft') prevLibrarySlide();
@@ -336,7 +350,6 @@ async function showContentPlayer(item) {
     const episodeSelect = document.getElementById('episodeSelect');
     const libraryButton = document.getElementById('libraryButton');
     const nextEpisodeBtn = document.getElementById('nextEpisodeBtn');
-    const castButton = document.getElementById('castButton');
 
     contentTitle.textContent = item.title || item.name;
     contentDescription.textContent = item.overview || 'No description available.';
@@ -353,7 +366,9 @@ async function showContentPlayer(item) {
     await loadRecommendations(item.id, item.media_type || 'movie');
 
     modal.style.display = 'block';
-    initializeCastButton(castButton);
+    watchTogetherActive = false;
+    document.getElementById('watchTogetherPanel').style.display = 'none';
+    checkWatchTogetherFromURL();
 }
 
 async function loadEpisodes(seriesId) {
@@ -440,32 +455,17 @@ async function loadLibrary() {
     seriesGrid.innerHTML = '';
     imageThumbnails.innerHTML = '';
 
-    // Display Movies
     if (library.movies.length > 0) {
         displayResults(library.movies, movieGrid);
     } else {
         movieGrid.innerHTML = '<p>No movies in library.</p>';
     }
 
-    // Display Series
     if (library.series.length > 0) {
         displayResults(library.series, seriesGrid);
     } else {
         seriesGrid.innerHTML = '<p>No series in library.</p>';
     }
-
-    // Load all specified image files from the root directory
-    currentImages = [
-        'jpeg.jpeg', 'jpeg1.jpeg', 'jpeg2.jpeg', 'jpeg3.jpeg', 'jpeg4.jpeg', 'jpeg5.jpeg',
-        'jpeg6.jpeg', 'jpeg7.jpeg', 'jpeg8.jpeg', 'jpeg9.jpeg', 'jpeg10.jpeg', 'jpeg11.jpeg',
-        'jpeg12.jpeg', 'jpeg13.jpeg', 'jpeg14.jpeg', 'jpeg15.jpeg', 'jpeg16.jpeg', 'jpeg17.jpeg',
-        'jpeg18.jpeg', 'jpeg19.jpeg', 'jpeg20.jpeg', 'jpeg21.jpeg', 'jpeg22.jpeg', 'jpeg23.jpeg',
-        'jpeg24.jpeg', 'jpeg25.jpeg', 'jpeg26.jpeg', 'jpeg27.jpeg', 'jpeg28.jpeg', 'jpeg29.jpeg',
-        'jpeg30.jpeg', 'jpeg31.jpeg', 'jpeg32.jpeg', 'jpeg33.jpeg', 'jpeg34.jpeg', 'jpeg35.jpeg',
-        'jpeg36.jpeg', 'jpeg37.jpeg', 'jpeg38.jpeg', 'jpeg39.jpeg', 'jpeg40.jpeg',
-        '1.jpeg', '2.jpeg',
-        'UC.webp', 'UC1.webp', 'UC2.webp', 'UC3.webp', 'UC4.webp', 'UC5.webp', 'UC6.webp'
-    ];
 
     currentImages.forEach((src, index) => {
         const thumbnail = document.createElement('div');
@@ -489,7 +489,7 @@ function showImageViewer(src) {
     currentImageIndex = currentImages.indexOf(src);
     const viewerImage = document.getElementById('viewerImage');
     viewerImage.src = src;
-    viewerImage.className = 'viewer-image'; // Default to normal view
+    viewerImage.className = 'viewer-image';
     document.getElementById('viewSizeSelect').value = 'normal';
     document.getElementById('imageViewerModal').style.display = 'block';
 }
@@ -508,7 +508,7 @@ function prevImage() {
     currentImageIndex = (currentImageIndex - 1 + currentImages.length) % currentImages.length;
     const viewerImage = document.getElementById('viewerImage');
     viewerImage.src = currentImages[currentImageIndex];
-    document.getElementById('viewSizeSelect').value = 'normal'; // Reset to normal on navigation
+    document.getElementById('viewSizeSelect').value = 'normal';
     viewerImage.className = 'viewer-image';
 }
 
@@ -516,7 +516,7 @@ function nextImage() {
     currentImageIndex = (currentImageIndex + 1) % currentImages.length;
     const viewerImage = document.getElementById('viewerImage');
     viewerImage.src = currentImages[currentImageIndex];
-    document.getElementById('viewSizeSelect').value = 'normal'; // Reset to normal on navigation
+    document.getElementById('viewSizeSelect').value = 'normal';
     viewerImage.className = 'viewer-image';
 }
 
@@ -559,39 +559,70 @@ function changeServer() {
     }
 
     iframe.src = src;
+    iframe.onload = () => {
+        if (watchTogetherActive && roomId) {
+            syncVideoState(iframe);
+        }
+    };
     videoPlayer.appendChild(iframe);
+
+    if (watchTogetherActive && roomId) {
+        db.ref(`rooms/${roomId}`).update({
+            server: server
+        });
+    }
 }
 
 function changeEpisode() {
     currentEpisodeIndex = parseInt(document.getElementById('episodeSelect').value);
     changeServer();
+    if (watchTogetherActive && roomId) {
+        db.ref(`rooms/${roomId}/state`).update({
+            episodeIndex: currentEpisodeIndex,
+            time: 0,
+            playing: false,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
 }
 
 function closeModal() {
+    if (watchTogetherActive && roomId) {
+        db.ref(`rooms/${roomId}/users`).child(getUserId()).remove();
+        window.removeEventListener('message', handleVideoEvents);
+    }
     document.getElementById('playerModal').style.display = 'none';
     document.getElementById('videoPlayer').innerHTML = '';
     document.getElementById('serverSelect').value = '';
     document.getElementById('episodeSelect').style.display = 'none';
     currentEpisodeIndex = 0;
-    if (castSession) {
-        castSession.endSession(true);
-        castSession = null;
-    }
+    watchTogetherActive = false;
+    roomId = null;
+    document.getElementById('watchTogetherPanel').style.display = 'none';
 }
 
 function rewindVideo() {
     const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[-5,true]}', '*');
+    if (iframe) {
+        iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[-5,true]}', '*');
+        if (watchTogetherActive && roomId) syncVideoState(iframe);
+    }
 }
 
 function forwardVideo() {
     const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[5,true]}', '*');
+    if (iframe) {
+        iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[5,true]}', '*');
+        if (watchTogetherActive && roomId) syncVideoState(iframe);
+    }
 }
 
 function togglePlayPause() {
     const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":[]}', '*');
+    if (iframe) {
+        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":[]}', '*');
+        if (watchTogetherActive && roomId) syncVideoState(iframe);
+    }
 }
 
 function toggleFullscreen() {
@@ -599,101 +630,188 @@ function toggleFullscreen() {
     if (iframe) iframe.requestFullscreen();
 }
 
-function initializeCast() {
-    if (!window.cast || !window.chrome || !window.chrome.cast) {
-        console.error('Google Cast SDK not loaded or not supported.');
+function toggleWatchTogether() {
+    if (!cookiesAllowed) {
+        alert('Please accept cookies to use the Watch Together feature.');
         return;
     }
 
-    const castContext = cast.framework.CastContext.getInstance();
-    castContext.setOptions({
-        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-    });
+    watchTogetherActive = !watchTogetherActive;
+    const watchTogetherPanel = document.getElementById('watchTogetherPanel');
+    const watchTogetherBtn = document.getElementById('watchTogetherBtn');
 
-    castContext.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, (event) => {
-        if (event.sessionState === 'SESSION_STARTED') {
-            castSession = castContext.getCurrentSession();
-            console.log('Cast session started:', castSession);
-        } else if (event.sessionState === 'SESSION_ENDED') {
-            castSession = null;
-            console.log('Cast session ended.');
+    if (watchTogetherActive) {
+        if (!roomId) {
+            roomId = Math.random().toString(36).substring(2, 15);
+            history.pushState(null, '', `${window.location.pathname}?room=${roomId}`);
+            initializeRoom();
+        }
+        watchTogetherPanel.style.display = 'flex';
+        watchTogetherBtn.textContent = 'End Watch Together';
+        joinRoom();
+        listenToRoomUpdates();
+    } else {
+        leaveRoom();
+        watchTogetherPanel.style.display = 'none';
+        watchTogetherBtn.textContent = 'Watch Together';
+        history.pushState(null, '', window.location.pathname);
+        roomId = null;
+    }
+}
+
+function checkWatchTogetherFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const room = urlParams.get('room');
+    if (room && currentContent) {
+        roomId = room;
+        watchTogetherActive = true;
+        document.getElementById('watchTogetherPanel').style.display = 'flex';
+        document.getElementById('watchTogetherBtn').textContent = 'End Watch Together';
+        joinRoom();
+        listenToRoomUpdates();
+    }
+}
+
+function initializeRoom() {
+    const roomRef = db.ref(`rooms/${roomId}`);
+    roomRef.set({
+        contentId: currentContent.id,
+        mediaType: currentContent.media_type || 'movie',
+        episodeIndex: currentEpisodeIndex,
+        server: document.getElementById('serverSelect').value || 'vidsrcTo',
+        state: {
+            playing: false,
+            time: 0,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        },
+        users: {},
+        messages: []
+    });
+}
+
+function joinRoom() {
+    const userId = getUserId();
+    const roomRef = db.ref(`rooms/${roomId}`);
+    roomRef.child('users').child(userId).set({
+        joinedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    roomRef.child('users').child(userId).onDisconnect().remove();
+
+    roomRef.once('value', (snapshot) => {
+        const roomData = snapshot.val();
+        if (roomData) {
+            currentContent = { id: roomData.contentId, mediaType: roomData.mediaType };
+            currentEpisodeIndex = roomData.episodeIndex || 0;
+            document.getElementById('serverSelect').value = roomData.server || 'vidsrcTo';
+            if (roomData.mediaType === 'tv') {
+                loadEpisodes(roomData.contentId).then(() => {
+                    document.getElementById('episodeSelect').value = currentEpisodeIndex;
+                    changeServer();
+                });
+            } else {
+                changeServer();
+            }
         }
     });
 }
 
-function initializeCastButton(button) {
-    if (!window.cast || !window.chrome || !window.chrome.cast) {
-        console.error('Google Cast SDK not loaded or not supported.');
-        button.disabled = true;
-        return;
+function leaveRoom() {
+    const userId = getUserId();
+    if (roomId) {
+        db.ref(`rooms/${roomId}/users`).child(userId).remove();
+        window.removeEventListener('message', handleVideoEvents);
     }
-
-    button.onclick = () => castToAndroidTV();
 }
 
-function castToAndroidTV() {
-    if (!cookiesAllowed) {
-        alert('Please accept cookies to use the casting feature.');
-        return;
+function getUserId() {
+    let userId = Cookies.get('userId');
+    if (!userId) {
+        userId = Math.random().toString(36).substring(2, 15);
+        Cookies.set('userId', userId, { expires: 365 });
     }
+    return userId;
+}
 
-    if (!navigator.onLine) {
-        alert('Please ensure your device is connected to the internet and WiFi.');
-        return;
-    }
-
-    const isSameNetwork = confirm('Are your device and Android TV connected to the same WiFi network?');
-    if (!isSameNetwork) {
-        alert('Please connect both devices to the same WiFi network for Google Cast.');
-        return;
-    }
-
-    const castContext = cast.framework.CastContext.getInstance();
-    const availableReceivers = castContext.getAvailableReceivers();
-    if (!availableReceivers || availableReceivers.length === 0) {
-        alert('No Android TV/Google TV devices found on the same WiFi network. Ensure your TV has Chromecast Built-In and is on the same network.');
-        return;
-    }
-
-    // Simulate device selection (Google Cast SDK handles this automatically in a real app)
-    let deviceList = '';
-    availableReceivers.forEach((receiver, index) => {
-        deviceList += `${index + 1}. ${receiver.friendlyName} (${receiver.ipAddress})\n`;
+function listenToRoomUpdates() {
+    const roomRef = db.ref(`rooms/${roomId}`);
+    
+    roomRef.child('users').on('value', (snapshot) => {
+        const users = snapshot.val();
+        const userCount = users ? Object.keys(users).length : 0;
+        document.getElementById('userCount').textContent = `Users Watching: ${userCount}`;
     });
 
-    let deviceChoice = prompt(`Select an Android TV/Google TV to cast to:\n${deviceList}`);
-    if (!deviceChoice || isNaN(deviceChoice) || deviceChoice < 1 || deviceChoice > availableReceivers.length) {
-        alert('No device selected or invalid choice. Casting canceled.');
-        return;
-    }
+    roomRef.child('messages').on('child_added', (snapshot) => {
+        const msg = snapshot.val();
+        displayChatMessage(msg.user, msg.text);
+    });
 
-    const selectedReceiver = availableReceivers[deviceChoice - 1];
-    castContext.requestSession().then(session => {
-        castSession = session;
-        const mediaInfo = new chrome.cast.media.MediaInfo(
-            document.getElementById('videoPlayer').querySelector('iframe')?.src || '',
-            'video/mp4'
-        );
-        const request = new chrome.cast.media.LoadRequest(mediaInfo);
-        session.loadMedia(request).then(() => {
-            alert(`Casting video to ${selectedReceiver.friendlyName} via Google Cast on the same WiFi network.`);
-        }).catch(error => {
-            console.error('Error loading media:', error);
-            alert('Failed to cast video. Please ensure your Android TV supports Google Cast and is DLNA-certified.');
+    roomRef.child('state').on('value', (snapshot) => {
+        const state = snapshot.val();
+        if (state && watchTogetherActive) {
+            const iframe = document.getElementById('videoPlayer').querySelector('iframe');
+            if (iframe) {
+                const currentTime = state.time;
+                iframe.contentWindow.postMessage(`{"event":"command","func":"seekTo","args":[${currentTime},true]}`, '*');
+                if (state.playing) {
+                    iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":[]}', '*');
+                } else {
+                    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":[]}', '*');
+                }
+            }
+        }
+    });
+}
+
+function handleVideoEvents(event) {
+    if (event.data.event === 'timeupdate' && watchTogetherActive && roomId) {
+        db.ref(`rooms/${roomId}/state`).update({
+            playing: event.data.playing,
+            time: event.data.currentTime,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
-    }).catch(error => {
-        console.error('Error requesting Cast session:', error);
-        alert('Failed to start casting. Please ensure Google Cast is enabled on your Android TV and both devices are on the same WiFi.');
+    }
+}
+
+function syncVideoState(iframe) {
+    if (!iframe || !roomId || !watchTogetherActive) return;
+
+    iframe.contentWindow.postMessage('{"event":"listening"}', '*');
+    window.removeEventListener('message', handleVideoEvents); // Remove previous listener to avoid duplicates
+    window.addEventListener('message', handleVideoEvents);
+}
+
+function shareRoomLink() {
+    if (!roomId) return;
+    const roomLink = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+    navigator.clipboard.writeText(roomLink).then(() => {
+        alert('Room link copied to clipboard: ' + roomLink);
+    }).catch(err => {
+        console.error('Failed to copy link:', err);
+        alert('Failed to copy link. Here it is: ' + roomLink);
     });
 }
 
-function openPopupPlayer() {
-    const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) {
-        const popup = window.open(iframe.src, 'Video Player', 'width=800,height=450');
-        popup.focus();
+function sendChatMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+    if (message && roomId) {
+        const userName = Cookies.get('userName') || 'Anonymous';
+        db.ref(`rooms/${roomId}/messages`).push({
+            user: userName,
+            text: message,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        chatInput.value = '';
     }
+}
+
+function displayChatMessage(user, text) {
+    const chatMessagesElement = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = `${user}: ${text}`;
+    chatMessagesElement.appendChild(messageDiv);
+    chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
 }
 
 function nextEpisode() {
@@ -701,6 +819,14 @@ function nextEpisode() {
         currentEpisodeIndex++;
         document.getElementById('episodeSelect').value = currentEpisodeIndex;
         changeServer();
+        if (watchTogetherActive && roomId) {
+            db.ref(`rooms/${roomId}/state`).update({
+                episodeIndex: currentEpisodeIndex,
+                time: 0,
+                playing: false,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
     }
 }
 
@@ -747,6 +873,22 @@ function changeTheme(theme) {
     currentTheme = theme;
 }
 
+function applyTheme(theme) {
+    const themes = {
+        orange: { color: '#ff4500', rgb: '255, 69, 0' },
+        red: { color: '#ff0000', rgb: '255, 0, 0' },
+        blue: { color: '#0000ff', rgb: '0, 0, 255' },
+        green: { color: '#00ff00', rgb: '0, 255, 0' },
+        purple: { color: '#9370DB', rgb: '147, 112, 219' },
+        yellow: { color: '#FFFF00', rgb: '255, 255, 0' },
+        pink: { color: '#FFC0CB', rgb: '255, 192, 203' },
+        gray: { color: '#808080', rgb: '128, 128, 128' }
+    };
+    const selectedTheme = themes[theme];
+    document.documentElement.style.setProperty('--theme-color', selectedTheme.color);
+    document.documentElement.style.setProperty('--theme-rgb', selectedTheme.rgb);
+}
+
 async function getRandomMovie() {
     try {
         const response = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${Math.floor(Math.random() * 10) + 1}`);
@@ -777,10 +919,6 @@ async function getRandomSeries() {
         console.error('Error loading random series:', error);
         alert('Failed to load a random series.');
     }
-}
-
-function closeCastDevicePopup() {
-    document.getElementById('castDevicePopup').style.display = 'none';
 }
 
 document.getElementById('searchInput').addEventListener('keypress', function(e) {

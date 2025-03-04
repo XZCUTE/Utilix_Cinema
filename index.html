@@ -6,8 +6,6 @@
     <title>UTILIX CINEMA</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- Google Cast SDK -->
-    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </head>
 <body>
     <div id="namePrompt" class="name-prompt" style="display: none;">
@@ -130,7 +128,17 @@
                         <h2 id="contentTitle" class="video-title"></h2>
                         <button id="libraryButton" class="library-btn" aria-label="Add to Library" onclick="toggleLibrary(currentContent)">Add to Library</button>
                     </div>
-                    <div id="videoPlayer" class="video-player"></div>
+                    <div class="video-player-wrapper">
+                        <div id="videoPlayer" class="video-player"></div>
+                        <div id="watchTogetherPanel" class="watch-together-panel" style="display: none;">
+                            <div id="userCount" class="user-count">Users Watching: 1</div>
+                            <div id="chatBox" class="chat-box">
+                                <div id="chatMessages" class="chat-messages"></div>
+                                <input type="text" id="chatInput" placeholder="Type a message..." aria-label="Chat Input" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                            </div>
+                            <button id="shareRoomBtn" class="share-room-btn" onclick="shareRoomLink()">Share Room Link</button>
+                        </div>
+                    </div>
                     <div class="video-controls">
                         <select id="serverSelect" onchange="changeServer()" aria-label="Select Server">
                             <option value="">Select Server</option>
@@ -138,7 +146,7 @@
                             <option value="vidsrcXyz">Server 2 - VidSrc.xyz - Best for series</option>
                             <option value="vidsrcCc">Server 3 - VidSrc.cc</option>
                             <option value="embedSu">Server 4 - Embed.su</option>
-                            <option value="vidlink">Server 5 - VidLink.pro</option>
+                            <option value="vidlink">Server 5 - VidLink.pro - Best for casting</option>
                             <option value="vidsrcIcu">Server 6 - VidSrc.icu</option>
                             <option value="autoembed">Server 7 - AutoEmbed.cc</option>
                             <option value="vidsrcTo">Server 8 - VidSrc.to</option>
@@ -151,7 +159,7 @@
                             <button onclick="togglePlayPause()" aria-label="Play or Pause">Play/Pause</button>
                             <button onclick="forwardVideo()" aria-label="Forward 5 seconds">+5s</button>
                             <button onclick="toggleFullscreen()" aria-label="Fullscreen">Fullscreen</button>
-                            <button id="castButton" class="control-buttons button" aria-label="Cast Video">Cast</button>
+                            <button id="watchTogetherBtn" class="control-buttons button" aria-label="Watch Together" onclick="toggleWatchTogether()">Watch Together</button>
                             <button id="nextEpisodeBtn" onclick="nextEpisode()" style="display: none;" aria-label="Next Episode">Next Episode</button>
                         </div>
                     </div>
@@ -210,13 +218,6 @@
                 </div>
             </div>
         </div>
-        <div id="castDevicePopup" class="modal" style="display: none;">
-            <div class="modal-content cast-device-popup">
-                <span class="close" aria-label="Close Cast Device Selection" onclick="closeCastDevicePopup()">×</span>
-                <h2>Select Device to Cast</h2>
-                <div class="cast-device-list" id="castDeviceList"></div>
-            </div>
-        </div>
     </main>
     <div class="random-section">
         <button class="random-btn" onclick="getRandomMovie()" aria-label="Random Movie">Random Movie</button>
@@ -226,7 +227,8 @@
         <p>© 2025 UTILIX CINEMA</p>
         <p>This is a demonstration project designed to showcase functionality. Our website does not host or store any data or media files on our servers. Instead, it aggregates content from third-party sources, providing links to media hosted externally. We do not claim ownership or responsibility for the content provided by these third-party services.</p>
     </footer>
-
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
     <script src="script.js"></script>
 </body>
