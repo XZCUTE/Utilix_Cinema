@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTILIX CINEMA - Player</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="player-page">
+        <div class="player-container">
+            <div class="video-header">
+                <h2 id="contentTitle" class="video-title"></h2>
+                <nav class="player-nav">
+                    <button class="nav-btn home-btn" onclick="window.location.href='index.html'" aria-label="Home">Home</button>
+                    <button id="signOutBtn" class="nav-btn" onclick="signOut()" aria-label="Sign Out" style="display: none;">🚪 Sign Out</button>
+                </nav>
+                <button id="libraryButton" class="library-btn" aria-label="Add to Library">Add to Library</button>
+            </div>
+            <div class="video-player-wrapper">
+                <div id="videoPlayer" class="video-player"></div>
+            </div>
+            <div class="video-controls" id="videoControls">
+                <select id="serverSelect" onchange="changeServer()" aria-label="Select Server">
+                    <option value="" selected>Select Server</option>
+                    <option value="vidsrcDev">Server 1 - VidSrc.dev</option>
+                    <option value="vidsrcXyz">Server 2 - VidSrc.xyz - Best for series</option>
+                    <option value="vidsrcCc">Server 3 - VidSrc.cc</option>
+                    <option value="embedSu">Server 4 - Embed.su</option>
+                    <option value="vidlink">Server 5 - VidLink.pro - Best for casting</option>
+                    <option value="vidsrcIcu">Server 6 - VidSrc.icu</option>
+                    <option value="autoembed">Server 7 - AutoEmbed.cc</option>
+                    <option value="vidsrcTo">Server 8 - VidSrc.to</option>
+                </select>
+                <select id="episodeSelect" onchange="changeEpisode()" style="display: none;" aria-label="Select Episode">
+                    <option value="">Select Episode</option>
+                </select>
+                <div class="control-buttons">
+                    <button class="control-btn" onclick="rewindVideo()" aria-label="Rewind 5 seconds">-5s</button>
+                    <button class="control-btn" onclick="togglePlayPause()" aria-label="Play or Pause">Play/Pause</button>
+                    <button class="control-btn" onclick="forwardVideo()" aria-label="Forward 5 seconds">+5s</button>
+                    <button class="control-btn" onclick="toggleFullscreen()" aria-label="Fullscreen">Fullscreen</button>
+                    <button class="control-btn" onclick="toggleCinemaMode()" aria-label="Cinema Mode">Cinema</button>
+                    <button class="control-btn" onclick="captureScreenshot()" aria-label="Screenshot">Screenshot</button>
+                    <button id="nextEpisodeBtn" class="control-btn" onclick="nextEpisode()" style="display: none;" aria-label="Next Episode">Next Episode</button>
+                </div>
+            </div>
+            <p id="contentDescription" class="video-description"></p>
+            <div id="recommendations" class="recommendations">
+                <h3>Recommended</h3>
+                <div id="recGrid" class="rec-grid"></div>
+            </div>
+        </div>
+    </div>
+    <script src="player.js"></script>
+</body>
+</html>

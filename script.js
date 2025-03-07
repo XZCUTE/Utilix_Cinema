@@ -1,4 +1,4 @@
-// Firebase Configuration (your provided config)
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAFODTsHwTCpthvJjzs6GQjDBish6r3oQs",
     authDomain: "utilixcinema.firebaseapp.com",
@@ -10,93 +10,146 @@ const firebaseConfig = {
     measurementId: "G-T5G9KEN7ZE"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+// Supabase Configuration (for Storage)
+const supabaseUrl = 'https://dwzucqiiclqzygmalslb.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3enVjcWlpY2xxenlnbWFsc2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMDAwNjIsImV4cCI6MjA1Njc3NjA2Mn0.EKEBejFrejDo0V56AeVS21lREQ5rahFGaInzACI03XA';
+let supabaseClient = null;
+
+async function initializeSupabase(maxRetries = 5, delay = 500) {
+    let retries = 0;
+    while (retries < maxRetries) {
+        if (typeof supabase !== 'undefined') {
+            try {
+                supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+                console.log('Supabase client initialized');
+                const user = auth.currentUser;
+                if (user) {
+                    const token = await user.getIdToken(true);
+                    const { data, error } = await supabaseClient.auth.setSession({ access_token: token });
+                    if (error) console.error('Error setting Supabase session:', error.message);
+                    else console.log('Supabase authenticated with Firebase token', data);
+                }
+                return true;
+            } catch (err) {
+                console.error('Error initializing Supabase:', err.message);
+                return false;
+            }
+        }
+        console.log(`Waiting for Supabase SDK to load... (Attempt ${retries + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        retries++;
+    }
+    console.error('Failed to load Supabase SDK after maximum retries.');
+    return false;
+}
 
 const TMDB_API_KEY = '43e5f570f85114b7a746c37aa6307b25';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
 let currentMode = 'movie';
-let currentContent = null;
-let currentEpisodes = [];
-let currentEpisodeIndex = 0;
-let cookiesAllowed = false;
-let librarySlideIndex = 0;
-let librarySlideInterval;
-let currentTheme = Cookies.get('theme') || 'orange';
 let clickCount = {};
-let currentImages = [
-    'jpeg.jpeg', 'jpeg1.jpeg', 'jpeg2.jpeg', 'jpeg3.jpeg', 'jpeg4.jpeg', 'jpeg5.jpeg',
-    'jpeg6.jpeg', 'jpeg7.jpeg', 'jpeg8.jpeg', 'jpeg9.jpeg', 'jpeg10.jpeg', 'jpeg11.jpeg',
-    'jpeg12.jpeg', 'jpeg13.jpeg', 'jpeg14.jpeg', 'jpeg15.jpeg', 'jpeg16.jpeg', 'jpeg17.jpeg',
-    'jpeg18.jpeg', 'jpeg19.jpeg', 'jpeg20.jpeg', 'jpeg21.jpeg', 'jpeg22.jpeg', 'jpeg23.jpeg',
-    'jpeg24.jpeg', 'jpeg25.jpeg', 'jpeg26.jpeg', 'jpeg27.jpeg', 'jpeg28.jpeg', 'jpeg29.jpeg',
-    'jpeg30.jpeg', 'jpeg31.jpeg', 'jpeg32.jpeg', 'jpeg33.jpeg', 'jpeg34.jpeg', 'jpeg35.jpeg',
-    'jpeg36.jpeg', 'jpeg37.jpeg', 'jpeg38.jpeg', 'jpeg39.jpeg', 'jpeg40.jpeg',
-    '1.jpeg', '2.jpeg',
-    'UC.webp', 'UC1.webp', 'UC2.webp', 'UC3.webp', 'UC4.webp', 'UC5.webp', 'UC6.webp'
-];
-let currentImageIndex = 0;
-let watchTogetherActive = false;
-let roomId = null;
+let currentScreenshots = [];
 
-function checkCookieConsent() {
-    const consent = Cookies.get('cookieConsent');
-    if (!consent) {
-        document.getElementById('cookieConsent').style.display = 'block';
-    } else {
-        cookiesAllowed = consent === 'accepted';
-        if (cookiesAllowed) {
+// Infinite Scroll Variables
+let moviePage = 1;
+let movieTotalPages = 1;
+let tvPage = 1;
+let tvTotalPages = 1;
+let isLoadingMovies = false;
+let isLoadingTV = false;
+
+// Intersection Observer for Infinite Scroll
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            if (entry.target.id === 'movieSentinel' && !isLoadingMovies) {
+                loadMoreMovies();
+            } else if (entry.target.id === 'tvSentinel' && !isLoadingTV) {
+                loadMoreTVShows();
+            }
+        }
+    });
+}, { root: null, rootMargin: '0px', threshold: 0.1 });
+
+function checkAuthState() {
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            document.getElementById('signOutBtn').style.display = 'inline-block';
+            showWelcomeMessage(user.displayName || 'User');
+            loadAndApplyTheme(user.uid);
             loadAllContent();
             loadLibrary();
-            checkName();
-            applyTheme(currentTheme);
+            checkRoomLink();
+            switchModeFromUrl();
+            initializeSupabase();
+        } else {
+            showLoginPrompt();
         }
-        initLibrarySlider();
+    });
+}
+
+function showLoginPrompt() {
+    const loginPrompt = document.createElement('div');
+    loginPrompt.id = 'loginPrompt';
+    loginPrompt.className = 'name-prompt';
+    loginPrompt.innerHTML = `
+        <h2>Please Sign In</h2>
+        <button onclick="signInWithGoogle()" aria-label="Sign in with Google">Sign in with Google</button>
+    `;
+    document.body.appendChild(loginPrompt);
+}
+
+function signInWithGoogle() {
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            console.log('User signed in:', result.user);
+            document.getElementById('loginPrompt').remove();
+            initializeSupabase();
+        })
+        .catch((error) => {
+            console.error('Error during sign-in:', error);
+            alert('Failed to sign in: ' + error.message);
+        });
+}
+
+function signOut() {
+    auth.signOut()
+        .then(() => {
+            console.log('User signed out');
+            window.location.reload();
+        })
+        .catch((error) => {
+            console.error('Error during sign-out:', error);
+        });
+}
+
+function checkRoomLink() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const room = urlParams.get('room');
+    if (room) {
+        db.ref(`rooms/${room}`).once('value', (snapshot) => {
+            const roomData = snapshot.val();
+            if (roomData) {
+                window.location.href = `player.html?contentId=${roomData.contentId}&mediaType=${roomData.mediaType}&room=${room}`;
+            }
+        });
     }
-}
-
-function acceptCookies() {
-    Cookies.set('cookieConsent', 'accepted', { expires: 365 });
-    cookiesAllowed = true;
-    document.getElementById('cookieConsent').style.display = 'none';
-    loadAllContent();
-    loadLibrary();
-    checkName();
-    initLibrarySlider();
-    applyTheme(currentTheme);
-}
-
-function declineCookies() {
-    Cookies.set('cookieConsent', 'declined', { expires: 365 });
-    cookiesAllowed = false;
-    document.getElementById('cookieConsent').style.display = 'none';
 }
 
 function loadAllContent() {
-    loadPopularMovies();
-    loadAllAnimeSections();
-}
-
-function checkName() {
-    const name = Cookies.get('userName');
-    if (!name) {
-        document.getElementById('namePrompt').style.display = 'block';
-    } else {
-        showWelcomeMessage(name);
-    }
-}
-
-function saveName() {
-    const name = document.getElementById('userName').value.trim();
-    if (name) {
-        Cookies.set('userName', name, { expires: 365 });
-        document.getElementById('namePrompt').style.display = 'none';
-        showWelcomeMessage(name);
-    } else {
-        alert('Please enter a name.');
+    if (currentMode === 'movie') {
+        loadMoreMovies();
+        loadMoreTVShows();
+    } else if (currentMode === 'anime') {
+        loadAllAnimeSections();
+    } else if (currentMode === 'library') {
+        loadLibrary();
     }
 }
 
@@ -108,51 +161,6 @@ function showWelcomeMessage(name) {
         welcomeMessage.style.display = 'none';
     }, 2000);
 }
-
-function initLibrarySlider() {
-    librarySlideIndex = 0;
-    showLibrarySlide(librarySlideIndex);
-    startLibrarySlider();
-}
-
-function startLibrarySlider() {
-    librarySlideInterval = setInterval(() => {
-        librarySlideIndex = (librarySlideIndex + 1) % 7;
-        showLibrarySlide(librarySlideIndex);
-    }, 5000);
-}
-
-function showLibrarySlide(index) {
-    const libraryImages = document.querySelectorAll('.library-image');
-    libraryImages.forEach((img, i) => {
-        img.classList.toggle('active', i === index);
-    });
-    console.log(`Showing library slide ${index + 1} (index: ${index})`);
-}
-
-function nextLibrarySlide() {
-    librarySlideIndex = (librarySlideIndex + 1) % 7;
-    showLibrarySlide(librarySlideIndex);
-    resetLibraryInterval();
-}
-
-function prevLibrarySlide() {
-    librarySlideIndex = (librarySlideIndex - 1 + 7) % 7;
-    showLibrarySlide(librarySlideIndex);
-    resetLibraryInterval();
-}
-
-function resetLibraryInterval() {
-    clearInterval(librarySlideInterval);
-    startLibrarySlider();
-}
-
-document.addEventListener('keydown', (e) => {
-    if (currentMode === 'library') {
-        if (e.key === 'ArrowLeft') prevLibrarySlide();
-        if (e.key === 'ArrowRight') nextLibrarySlide();
-    }
-});
 
 async function switchMode(mode) {
     currentMode = mode;
@@ -173,26 +181,39 @@ async function switchMode(mode) {
     libraryGrids.forEach(id => document.getElementById(id).innerHTML = '');
 
     if (mode === 'movie') {
-        loadPopularMovies();
+        moviePage = 1;
+        tvPage = 1;
+        movieTotalPages = 1;
+        tvTotalPages = 1;
+        loadMoreMovies();
+        loadMoreTVShows();
     } else if (mode === 'anime') {
         loadAllAnimeSections();
     } else if (mode === 'library') {
         loadLibrary();
     }
-    document.getElementById('sidebar').classList.remove('active');
 }
 
-function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('active');
+function switchModeFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    if (mode && ['movie', 'anime', 'library'].includes(mode)) {
+        switchMode(mode);
+    }
 }
 
-function toggleCategoriesPopup() {
-    const popup = document.getElementById('categoriesPopup');
-    popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+function toggleSettings() {
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal.style.display === 'block') {
+        settingsModal.style.display = 'none';
+    } else {
+        settingsModal.style.display = 'block';
+        loadTheme();
+    }
 }
 
-function closeCategoriesPopup() {
-    document.getElementById('categoriesPopup').style.display = 'none';
+function closeSettings() {
+    document.getElementById('settingsModal').style.display = 'none';
 }
 
 function loadCategoryAndClose(genre) {
@@ -201,7 +222,9 @@ function loadCategoryAndClose(genre) {
 }
 
 async function searchContent() {
-    const searchInput = document.getElementById('searchInput').value;
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    if (!searchInput) return;
+
     if (currentMode === 'movie') {
         const movieGrid = document.getElementById('movieGrid');
         const tvGrid = document.getElementById('tvGrid');
@@ -216,6 +239,8 @@ async function searchContent() {
             displayResults(tvShows, tvGrid);
         } catch (error) {
             console.error('Error searching movies:', error);
+            movieGrid.innerHTML = '<p>Error searching movies.</p>';
+            tvGrid.innerHTML = '<p>Error searching TV shows.</p>';
         }
     } else if (currentMode === 'anime') {
         const grids = ['animeMovieGrid', 'animeSeriesGrid', 'trendingGrid', 'popularGrid', 'recommendedGrid', 'topGrid', 'latestGrid'];
@@ -229,6 +254,55 @@ async function searchContent() {
             displayResults(seriesData.results, document.getElementById('animeSeriesGrid'));
         } catch (error) {
             console.error('Error searching anime:', error);
+            document.getElementById('animeMovieGrid').innerHTML = '<p>Error searching anime movies.</p>';
+            document.getElementById('animeSeriesGrid').innerHTML = '<p>Error searching anime series.</p>';
+        }
+    } else if (currentMode === 'library') {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const movieGrid = document.getElementById('libraryMovieGrid');
+        const seriesGrid = document.getElementById('librarySeriesGrid');
+        const imageThumbnails = document.getElementById('imageThumbnails');
+        movieGrid.innerHTML = '<p>Searching movies...</p>';
+        seriesGrid.innerHTML = '<p>Searching series...</p>';
+        imageThumbnails.innerHTML = '<p>Searching screenshots...</p>';
+
+        try {
+            const librarySnapshot = await db.ref(`users/${user.uid}/library`).once('value');
+            const library = librarySnapshot.val() || { movies: [], series: [], screenshots: [] };
+
+            const filteredMovies = (library.movies || []).filter(movie =>
+                movie.title.toLowerCase().includes(searchInput)
+            );
+            const filteredSeries = (library.series || []).filter(series =>
+                series.title.toLowerCase().includes(searchInput)
+            );
+            const filteredScreenshots = Object.values(library.screenshots || {}).filter(src =>
+                src.toLowerCase().includes(searchInput)
+            );
+
+            displayResults(filteredMovies, movieGrid);
+            displayResults(filteredSeries, seriesGrid);
+
+            if (filteredScreenshots.length > 0) {
+                imageThumbnails.innerHTML = '';
+                currentScreenshots = filteredScreenshots;
+                currentScreenshots.forEach((src, index) => {
+                    const thumbnail = document.createElement('div');
+                    thumbnail.className = 'thumbnail';
+                    thumbnail.innerHTML = `<img src="${src}" alt="Screenshot ${index + 1}" loading="lazy">`;
+                    thumbnail.onclick = () => handleThumbnailClick(src, thumbnail);
+                    imageThumbnails.appendChild(thumbnail);
+                });
+            } else {
+                imageThumbnails.innerHTML = '<p>No matching screenshots found.</p>';
+            }
+        } catch (error) {
+            console.error('Error searching library:', error);
+            movieGrid.innerHTML = '<p>Error searching movies.</p>';
+            seriesGrid.innerHTML = '<p>Error searching series.</p>';
+            imageThumbnails.innerHTML = '<p>Error searching screenshots.</p>';
         }
     }
 }
@@ -248,13 +322,13 @@ async function showSuggestions(query) {
             const suggestion = document.createElement('div');
             suggestion.className = 'suggestion-item';
             suggestion.innerHTML = `
-                <img src="${item.poster_path ? TMDB_IMG_URL + item.poster_path : 'https://via.placeholder.com/50x75'}" alt="${item.title || item.name}">
+                <img src="${item.poster_path ? TMDB_IMG_URL + item.poster_path : 'https://via.placeholder.com/50x75'}" alt="${item.title || item.name}" loading="lazy">
                 <span>${item.title || item.name} (${item.media_type})</span>
             `;
             suggestion.onclick = () => {
                 document.getElementById('searchInput').value = item.title || item.name;
                 suggestions.style.display = 'none';
-                showContentPlayer(item);
+                window.location.href = `player.html?contentId=${item.id}&mediaType=${item.media_type}`;
             };
             suggestions.appendChild(suggestion);
         });
@@ -263,6 +337,14 @@ async function showSuggestions(query) {
         console.error('Error fetching suggestions:', error);
     }
 }
+
+document.addEventListener('click', (e) => {
+    const searchContainer = document.querySelector('.search-container');
+    const suggestions = document.getElementById('suggestions');
+    if (!searchContainer.contains(e.target)) {
+        suggestions.style.display = 'none';
+    }
+});
 
 async function loadCategory(genre) {
     const genreMap = {
@@ -322,158 +404,214 @@ async function loadAllAnimeSections() {
     }
 }
 
-function displayResults(results, grid) {
+// Create a loading indicator element
+function createLoadingIndicator() {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading-indicator';
+    loadingDiv.innerHTML = '<p>Loading more content...</p>';
+    return loadingDiv;
+}
+
+// Remove the loading indicator from the grid
+function removeLoadingIndicator(grid) {
+    const loadingIndicator = grid.querySelector('.loading-indicator');
+    if (loadingIndicator) {
+        loadingIndicator.remove();
+    }
+}
+
+function displayResults(results, grid, append = false) {
+    if (!append) grid.innerHTML = '';
     if (results && results.length > 0) {
         for (const item of results) {
             const movieCard = document.createElement('div');
             movieCard.className = 'movie-card';
             movieCard.innerHTML = `
-                <img src="${item.poster_path ? TMDB_IMG_URL + item.poster_path : 'https://via.placeholder.com/200'}" alt="${item.title || item.name}">
+                <img src="${item.poster_path ? TMDB_IMG_URL + item.poster_path : 'https://via.placeholder.com/200'}" alt="${item.title || item.name}" loading="lazy">
                 <h3>${item.title || item.name}</h3>
                 <p>${item.release_date ? item.release_date.slice(0, 4) : item.first_air_date ? item.first_air_date.slice(0, 4) : 'N/A'} | Rating: ${item.vote_average || 'N/A'}</p>
             `;
-            movieCard.onclick = () => showContentPlayer(item);
+            movieCard.onclick = () => {
+                const mediaType = item.media_type || (item.release_date ? 'movie' : 'tv');
+                window.location.href = `player.html?contentId=${item.id}&mediaType=${mediaType}`;
+            };
             grid.appendChild(movieCard);
         }
     } else {
-        grid.innerHTML = '<p>No results found</p>';
+        grid.innerHTML += '<p>No more results found</p>';
     }
 }
 
-async function showContentPlayer(item) {
-    currentContent = item;
-    const modal = document.getElementById('playerModal');
-    const videoPlayer = document.getElementById('videoPlayer');
-    const contentTitle = document.getElementById('contentTitle');
-    const contentDescription = document.getElementById('contentDescription');
-    const serverSelect = document.getElementById('serverSelect');
-    const episodeSelect = document.getElementById('episodeSelect');
-    const libraryButton = document.getElementById('libraryButton');
-    const nextEpisodeBtn = document.getElementById('nextEpisodeBtn');
-
-    contentTitle.textContent = item.title || item.name;
-    contentDescription.textContent = item.overview || 'No description available.';
-    videoPlayer.innerHTML = '<p>Please select a server to watch</p>';
-    serverSelect.value = '';
-    episodeSelect.style.display = 'none';
-    nextEpisodeBtn.style.display = 'none';
-
-    updateLibraryButton(libraryButton, item.id);
-
-    if (item.media_type === 'tv' || item.first_air_date) {
-        await loadEpisodes(item.id);
+// Load more movies with loading indicator
+async function loadMoreMovies() {
+    if (isLoadingMovies || moviePage > movieTotalPages) return;
+    isLoadingMovies = true;
+    const movieGrid = document.getElementById('movieGrid');
+    const existingSentinel = document.getElementById('movieSentinel');
+    if (existingSentinel) {
+        observer.unobserve(existingSentinel);
+        existingSentinel.remove();
     }
-    await loadRecommendations(item.id, item.media_type || 'movie');
-
-    modal.style.display = 'block';
-    watchTogetherActive = false;
-    document.getElementById('watchTogetherPanel').style.display = 'none';
-    checkWatchTogetherFromURL();
-}
-
-async function loadEpisodes(seriesId) {
+    // Show loading indicator
+    const loadingIndicator = createLoadingIndicator();
+    movieGrid.appendChild(loadingIndicator);
     try {
-        const response = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}?api_key=${TMDB_API_KEY}`);
+        const response = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${moviePage}`);
         const data = await response.json();
-        currentEpisodes = data.seasons.flatMap(season =>
-            Array.from({ length: season.episode_count }, (_, i) => ({
-                season: season.season_number,
-                episode: i + 1
-            }))
-        );
-        const episodeSelect = document.getElementById('episodeSelect');
-        episodeSelect.innerHTML = '<option value="">Select Episode</option>';
-        currentEpisodes.forEach((ep, index) => {
-            const option = document.createElement('option');
-            option.value = index;
-            option.textContent = `S${ep.season} E${ep.episode}`;
-            episodeSelect.appendChild(option);
-        });
-        episodeSelect.style.display = 'block';
-        document.getElementById('nextEpisodeBtn').style.display = 'block';
+        movieTotalPages = data.total_pages;
+        displayResults(data.results, movieGrid, true);
+        if (moviePage < movieTotalPages) {
+            const sentinel = document.createElement('div');
+            sentinel.id = 'movieSentinel';
+            movieGrid.appendChild(sentinel);
+            observer.observe(sentinel);
+        } else {
+            movieGrid.appendChild(document.createElement('p')).innerText = 'No more movies to load.';
+        }
+        moviePage++;
     } catch (error) {
-        console.error('Error loading episodes:', error);
+        console.error('Error loading more movies:', error);
+        movieGrid.appendChild(document.createElement('p')).innerText = 'Failed to load more movies.';
+    } finally {
+        removeLoadingIndicator(movieGrid);
+        isLoadingMovies = false;
     }
 }
 
-async function loadRecommendations(contentId, mediaType) {
-    const recGrid = document.getElementById('recGrid');
-    recGrid.innerHTML = '';
+// Load more TV shows with loading indicator
+async function loadMoreTVShows() {
+    if (isLoadingTV || tvPage > tvTotalPages) return;
+    isLoadingTV = true;
+    const tvGrid = document.getElementById('tvGrid');
+    const existingSentinel = document.getElementById('tvSentinel');
+    if (existingSentinel) {
+        observer.unobserve(existingSentinel);
+        existingSentinel.remove();
+    }
+    // Show loading indicator
+    const loadingIndicator = createLoadingIndicator();
+    tvGrid.appendChild(loadingIndicator);
     try {
-        const response = await fetch(`${TMDB_BASE_URL}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}`);
+        const response = await fetch(`${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&page=${tvPage}`);
         const data = await response.json();
-        displayResults(data.results.slice(0, 5), recGrid);
+        tvTotalPages = data.total_pages;
+        displayResults(data.results, tvGrid, true);
+        if (tvPage < tvTotalPages) {
+            const sentinel = document.createElement('div');
+            sentinel.id = 'tvSentinel';
+            tvGrid.appendChild(sentinel);
+            observer.observe(sentinel);
+        } else {
+            tvGrid.appendChild(document.createElement('p')).innerText = 'No more TV shows to load.';
+        }
+        tvPage++;
     } catch (error) {
-        console.error('Error loading recommendations:', error);
+        console.error('Error loading more TV shows:', error);
+        tvGrid.appendChild(document.createElement('p')).innerText = 'Failed to load more TV shows.';
+    } finally {
+        removeLoadingIndicator(tvGrid);
+        isLoadingTV = false;
     }
-}
-
-function toggleLibrary(item) {
-    if (!cookiesAllowed) {
-        alert('Please accept cookies to use the library feature.');
-        return;
-    }
-
-    const library = getLibrary();
-    const isSeries = item.media_type === 'tv' || item.first_air_date;
-    const key = isSeries ? 'series' : 'movies';
-    const index = library[key].findIndex(i => i.id === item.id);
-
-    if (index === -1) {
-        library[key].push(item);
-    } else {
-        library[key].splice(index, 1);
-    }
-
-    Cookies.set('library', JSON.stringify(library), { expires: 365 });
-    updateLibraryButton(document.getElementById('libraryButton'), item.id);
-    if (currentMode === 'library') loadLibrary();
-}
-
-function getLibrary() {
-    const libraryCookie = Cookies.get('library');
-    return libraryCookie ? JSON.parse(libraryCookie) : { movies: [], series: [] };
-}
-
-function updateLibraryButton(button, id) {
-    if (!button) return;
-    const library = getLibrary();
-    const isSeries = library.series.some(i => i.id === id);
-    const isMovie = library.movies.some(i => i.id === id);
-    const inLibrary = isSeries || isMovie;
-    button.textContent = inLibrary ? 'Remove from Library' : 'Add to Library';
-    button.classList.toggle('in-library', inLibrary);
-    button.dataset.id = id;
 }
 
 async function loadLibrary() {
-    const library = getLibrary();
+    const user = auth.currentUser;
+    if (!user) return;
+
     const movieGrid = document.getElementById('libraryMovieGrid');
     const seriesGrid = document.getElementById('librarySeriesGrid');
     const imageThumbnails = document.getElementById('imageThumbnails');
-    movieGrid.innerHTML = '';
-    seriesGrid.innerHTML = '';
-    imageThumbnails.innerHTML = '';
+    movieGrid.innerHTML = '<p>Loading movies...</p>';
+    seriesGrid.innerHTML = '<p>Loading series...</p>';
+    imageThumbnails.innerHTML = '<p>Loading screenshots...</p>';
 
-    if (library.movies.length > 0) {
-        displayResults(library.movies, movieGrid);
-    } else {
-        movieGrid.innerHTML = '<p>No movies in library.</p>';
+    try {
+        const librarySnapshot = await db.ref(`users/${user.uid}/library`).once('value');
+        const library = librarySnapshot.val() || { movies: [], series: [], screenshots: [] };
+
+        if (library.movies && library.movies.length > 0) {
+            displayResults(library.movies, movieGrid);
+        } else {
+            movieGrid.innerHTML = '<p>No movies in library.</p>';
+        }
+
+        if (library.series && library.series.length > 0) {
+            displayResults(library.series, seriesGrid);
+        } else {
+            seriesGrid.innerHTML = '<p>No series in library.</p>';
+        }
+
+        if (library.screenshots && Object.keys(library.screenshots).length > 0) {
+            imageThumbnails.innerHTML = '';
+            currentScreenshots = Object.values(library.screenshots);
+            currentScreenshots.forEach((src, index) => {
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'thumbnail';
+                thumbnail.innerHTML = `<img src="${src}" alt="Screenshot ${index + 1}" loading="lazy">`;
+                thumbnail.onclick = () => handleThumbnailClick(src, thumbnail);
+                imageThumbnails.appendChild(thumbnail);
+            });
+        } else {
+            imageThumbnails.innerHTML = '<p>No screenshots available.</p>';
+        }
+    } catch (error) {
+        console.error('Error loading library:', error);
+        movieGrid.innerHTML = '<p>Error loading movies.</p>';
+        seriesGrid.innerHTML = '<p>Error loading series.</p>';
+        imageThumbnails.innerHTML = '<p>Error loading screenshots.</p>';
+    }
+}
+
+async function deleteScreenshot(src) {
+    const user = auth.currentUser;
+    if (!user) {
+        alert('Please sign in to delete screenshots.');
+        return;
     }
 
-    if (library.series.length > 0) {
-        displayResults(library.series, seriesGrid);
-    } else {
-        seriesGrid.innerHTML = '<p>No series in library.</p>';
+    if (!supabaseClient) {
+        console.warn('Supabase client not initialized, attempting to initialize...');
+        const initialized = await initializeSupabase();
+        if (!initialized || !supabaseClient) {
+            alert('Failed to initialize Supabase client. Please refresh the page and try again.');
+            return;
+        }
     }
 
-    currentImages.forEach((src, index) => {
-        const thumbnail = document.createElement('div');
-        thumbnail.className = 'thumbnail';
-        thumbnail.innerHTML = `<img src="${src}" alt="Thumbnail ${index + 1}">`;
-        thumbnail.onclick = () => handleThumbnailClick(src, thumbnail);
-        imageThumbnails.appendChild(thumbnail);
-    });
+    try {
+        const filePath = src.split('/screenshots/')[1];
+        if (!filePath) {
+            throw new Error('Invalid file path extracted from URL: ' + src);
+        }
+        const { error: storageError } = await supabaseClient.storage
+            .from('screenshots')
+            .remove([filePath]);
+
+        if (storageError) {
+            console.error('Error deleting screenshot from Supabase:', storageError.message);
+            alert('Failed to delete screenshot from storage: ' + storageError.message);
+            return;
+        }
+
+        const screenshotsRef = db.ref(`users/${user.uid}/library/screenshots`);
+        const snapshot = await screenshotsRef.once('value');
+        const screenshots = snapshot.val() || {};
+        const keyToDelete = Object.keys(screenshots).find(key => screenshots[key] === src);
+
+        if (keyToDelete) {
+            await screenshotsRef.child(keyToDelete).remove();
+            console.log('Screenshot deleted from Firebase:', src);
+        } else {
+            console.warn('No matching screenshot key found in Firebase for:', src);
+        }
+
+        closeImageViewer();
+        loadLibrary();
+        alert('Screenshot deleted successfully!');
+    } catch (error) {
+        console.error('Error deleting screenshot:', error);
+        alert('Failed to delete screenshot: ' + error.message);
+    }
 }
 
 function handleThumbnailClick(src, thumbnail) {
@@ -486,16 +624,35 @@ function handleThumbnailClick(src, thumbnail) {
 }
 
 function showImageViewer(src) {
-    currentImageIndex = currentImages.indexOf(src);
+    const currentImageIndex = currentScreenshots.indexOf(src);
     const viewerImage = document.getElementById('viewerImage');
     viewerImage.src = src;
     viewerImage.className = 'viewer-image';
     document.getElementById('viewSizeSelect').value = 'normal';
+
+    const modalContent = document.querySelector('#imageViewerModal .modal-content');
+    let deleteBtn = document.getElementById('deleteScreenshotBtn');
+    if (!deleteBtn) {
+        deleteBtn = document.createElement('button');
+        deleteBtn.id = 'deleteScreenshotBtn';
+        deleteBtn.textContent = 'Delete Screenshot';
+        deleteBtn.style.marginTop = '10px';
+        deleteBtn.style.backgroundColor = '#ff4444';
+        deleteBtn.style.color = '#fff';
+        deleteBtn.style.border = 'none';
+        deleteBtn.style.padding = '5px 10px';
+        deleteBtn.style.cursor = 'pointer';
+        deleteBtn.style.borderRadius = '5px';
+        modalContent.appendChild(deleteBtn);
+    }
+    deleteBtn.onclick = () => deleteScreenshot(src);
+
     document.getElementById('imageViewerModal').style.display = 'block';
 }
 
 function closeImageViewer() {
     document.getElementById('imageViewerModal').style.display = 'none';
+    Object.keys(clickCount).forEach(key => clickCount[key] = 0);
 }
 
 function changeViewSize() {
@@ -505,345 +662,30 @@ function changeViewSize() {
 }
 
 function prevImage() {
-    currentImageIndex = (currentImageIndex - 1 + currentImages.length) % currentImages.length;
+    const currentImageIndex = currentScreenshots.indexOf(document.getElementById('viewerImage').src);
+    const newIndex = (currentImageIndex - 1 + currentScreenshots.length) % currentScreenshots.length;
     const viewerImage = document.getElementById('viewerImage');
-    viewerImage.src = currentImages[currentImageIndex];
+    viewerImage.src = currentScreenshots[newIndex];
     document.getElementById('viewSizeSelect').value = 'normal';
     viewerImage.className = 'viewer-image';
+
+    const deleteBtn = document.getElementById('deleteScreenshotBtn');
+    if (deleteBtn) {
+        deleteBtn.onclick = () => deleteScreenshot(currentScreenshots[newIndex]);
+    }
 }
 
 function nextImage() {
-    currentImageIndex = (currentImageIndex + 1) % currentImages.length;
+    const currentImageIndex = currentScreenshots.indexOf(document.getElementById('viewerImage').src);
+    const newIndex = (currentImageIndex + 1) % currentScreenshots.length;
     const viewerImage = document.getElementById('viewerImage');
-    viewerImage.src = currentImages[currentImageIndex];
+    viewerImage.src = currentScreenshots[newIndex];
     document.getElementById('viewSizeSelect').value = 'normal';
     viewerImage.className = 'viewer-image';
-}
 
-function changeServer() {
-    const server = document.getElementById('serverSelect').value;
-    const videoPlayer = document.getElementById('videoPlayer');
-    const contentId = currentContent.id;
-
-    if (!server || !contentId) return;
-
-    videoPlayer.innerHTML = '';
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('allowfullscreen', '');
-    iframe.setAttribute('scrolling', 'no');
-
-    let src = '';
-    if (currentContent.media_type === 'tv' || currentContent.first_air_date) {
-        const ep = currentEpisodes[currentEpisodeIndex];
-        switch (server) {
-            case 'vidsrcDev': src = `https://vidsrc.dev/embed/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-            case 'vidsrcXyz': src = `https://vidsrc.xyz/embed/tv?tmdb=${contentId}&season=${ep.season}&episode=${ep.episode}`; break;
-            case 'vidsrcCc': src = `https://vidsrc.cc/v2/embed/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-            case 'embedSu': src = `https://embed.su/embed/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-            case 'vidlink': src = `https://vidlink.pro/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-            case 'vidsrcIcu': src = `https://vidsrc.icu/embed/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-            case 'autoembed': src = `https://player.autoembed.cc/embed/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-            case 'vidsrcTo': src = `https://vidsrc.to/embed/tv/${contentId}/${ep.season}/${ep.episode}`; break;
-        }
-    } else {
-        switch (server) {
-            case 'vidsrcDev': src = `https://vidsrc.dev/embed/movie/${contentId}`; break;
-            case 'vidsrcXyz': src = `https://vidsrc.xyz/embed/movie?tmdb=${contentId}`; break;
-            case 'vidsrcCc': src = `https://vidsrc.cc/v2/embed/movie/${contentId}`; break;
-            case 'embedSu': src = `https://embed.su/embed/movie/${contentId}`; break;
-            case 'vidlink': src = `https://vidlink.pro/movie/${contentId}`; break;
-            case 'vidsrcIcu': src = `https://vidsrc.icu/embed/movie/${contentId}`; break;
-            case 'autoembed': src = `https://player.autoembed.cc/embed/movie/${contentId}`; break;
-            case 'vidsrcTo': src = `https://vidsrc.to/embed/movie/${contentId}`; break;
-        }
-    }
-
-    iframe.src = src;
-    iframe.onload = () => {
-        if (watchTogetherActive && roomId) {
-            syncVideoState(iframe);
-        }
-    };
-    videoPlayer.appendChild(iframe);
-
-    if (watchTogetherActive && roomId) {
-        db.ref(`rooms/${roomId}`).update({
-            server: server
-        });
-    }
-}
-
-function changeEpisode() {
-    currentEpisodeIndex = parseInt(document.getElementById('episodeSelect').value);
-    changeServer();
-    if (watchTogetherActive && roomId) {
-        db.ref(`rooms/${roomId}/state`).update({
-            episodeIndex: currentEpisodeIndex,
-            time: 0,
-            playing: false,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-}
-
-function closeModal() {
-    if (watchTogetherActive && roomId) {
-        db.ref(`rooms/${roomId}/users`).child(getUserId()).remove();
-        window.removeEventListener('message', handleVideoEvents);
-    }
-    document.getElementById('playerModal').style.display = 'none';
-    document.getElementById('videoPlayer').innerHTML = '';
-    document.getElementById('serverSelect').value = '';
-    document.getElementById('episodeSelect').style.display = 'none';
-    currentEpisodeIndex = 0;
-    watchTogetherActive = false;
-    roomId = null;
-    document.getElementById('watchTogetherPanel').style.display = 'none';
-}
-
-function rewindVideo() {
-    const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) {
-        iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[-5,true]}', '*');
-        if (watchTogetherActive && roomId) syncVideoState(iframe);
-    }
-}
-
-function forwardVideo() {
-    const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) {
-        iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[5,true]}', '*');
-        if (watchTogetherActive && roomId) syncVideoState(iframe);
-    }
-}
-
-function togglePlayPause() {
-    const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) {
-        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":[]}', '*');
-        if (watchTogetherActive && roomId) syncVideoState(iframe);
-    }
-}
-
-function toggleFullscreen() {
-    const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-    if (iframe) iframe.requestFullscreen();
-}
-
-function toggleWatchTogether() {
-    if (!cookiesAllowed) {
-        alert('Please accept cookies to use the Watch Together feature.');
-        return;
-    }
-
-    watchTogetherActive = !watchTogetherActive;
-    const watchTogetherPanel = document.getElementById('watchTogetherPanel');
-    const watchTogetherBtn = document.getElementById('watchTogetherBtn');
-
-    if (watchTogetherActive) {
-        if (!roomId) {
-            roomId = Math.random().toString(36).substring(2, 15);
-            history.pushState(null, '', `${window.location.pathname}?room=${roomId}`);
-            initializeRoom();
-        }
-        watchTogetherPanel.style.display = 'flex';
-        watchTogetherBtn.textContent = 'End Watch Together';
-        joinRoom();
-        listenToRoomUpdates();
-    } else {
-        leaveRoom();
-        watchTogetherPanel.style.display = 'none';
-        watchTogetherBtn.textContent = 'Watch Together';
-        history.pushState(null, '', window.location.pathname);
-        roomId = null;
-    }
-}
-
-function checkWatchTogetherFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const room = urlParams.get('room');
-    if (room && currentContent) {
-        roomId = room;
-        watchTogetherActive = true;
-        document.getElementById('watchTogetherPanel').style.display = 'flex';
-        document.getElementById('watchTogetherBtn').textContent = 'End Watch Together';
-        joinRoom();
-        listenToRoomUpdates();
-    }
-}
-
-function initializeRoom() {
-    const roomRef = db.ref(`rooms/${roomId}`);
-    roomRef.set({
-        contentId: currentContent.id,
-        mediaType: currentContent.media_type || 'movie',
-        episodeIndex: currentEpisodeIndex,
-        server: document.getElementById('serverSelect').value || 'vidsrcTo',
-        state: {
-            playing: false,
-            time: 0,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        },
-        users: {},
-        messages: []
-    });
-}
-
-function joinRoom() {
-    const userId = getUserId();
-    const roomRef = db.ref(`rooms/${roomId}`);
-    roomRef.child('users').child(userId).set({
-        joinedAt: firebase.database.ServerValue.TIMESTAMP
-    });
-    roomRef.child('users').child(userId).onDisconnect().remove();
-
-    roomRef.once('value', (snapshot) => {
-        const roomData = snapshot.val();
-        if (roomData) {
-            currentContent = { id: roomData.contentId, mediaType: roomData.mediaType };
-            currentEpisodeIndex = roomData.episodeIndex || 0;
-            document.getElementById('serverSelect').value = roomData.server || 'vidsrcTo';
-            if (roomData.mediaType === 'tv') {
-                loadEpisodes(roomData.contentId).then(() => {
-                    document.getElementById('episodeSelect').value = currentEpisodeIndex;
-                    changeServer();
-                });
-            } else {
-                changeServer();
-            }
-        }
-    });
-}
-
-function leaveRoom() {
-    const userId = getUserId();
-    if (roomId) {
-        db.ref(`rooms/${roomId}/users`).child(userId).remove();
-        window.removeEventListener('message', handleVideoEvents);
-    }
-}
-
-function getUserId() {
-    let userId = Cookies.get('userId');
-    if (!userId) {
-        userId = Math.random().toString(36).substring(2, 15);
-        Cookies.set('userId', userId, { expires: 365 });
-    }
-    return userId;
-}
-
-function listenToRoomUpdates() {
-    const roomRef = db.ref(`rooms/${roomId}`);
-    
-    roomRef.child('users').on('value', (snapshot) => {
-        const users = snapshot.val();
-        const userCount = users ? Object.keys(users).length : 0;
-        document.getElementById('userCount').textContent = `Users Watching: ${userCount}`;
-    });
-
-    roomRef.child('messages').on('child_added', (snapshot) => {
-        const msg = snapshot.val();
-        displayChatMessage(msg.user, msg.text);
-    });
-
-    roomRef.child('state').on('value', (snapshot) => {
-        const state = snapshot.val();
-        if (state && watchTogetherActive) {
-            const iframe = document.getElementById('videoPlayer').querySelector('iframe');
-            if (iframe) {
-                const currentTime = state.time;
-                iframe.contentWindow.postMessage(`{"event":"command","func":"seekTo","args":[${currentTime},true]}`, '*');
-                if (state.playing) {
-                    iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":[]}', '*');
-                } else {
-                    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":[]}', '*');
-                }
-            }
-        }
-    });
-}
-
-function handleVideoEvents(event) {
-    if (event.data.event === 'timeupdate' && watchTogetherActive && roomId) {
-        db.ref(`rooms/${roomId}/state`).update({
-            playing: event.data.playing,
-            time: event.data.currentTime,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-}
-
-function syncVideoState(iframe) {
-    if (!iframe || !roomId || !watchTogetherActive) return;
-
-    iframe.contentWindow.postMessage('{"event":"listening"}', '*');
-    window.removeEventListener('message', handleVideoEvents); // Remove previous listener to avoid duplicates
-    window.addEventListener('message', handleVideoEvents);
-}
-
-function shareRoomLink() {
-    if (!roomId) return;
-    const roomLink = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-    navigator.clipboard.writeText(roomLink).then(() => {
-        alert('Room link copied to clipboard: ' + roomLink);
-    }).catch(err => {
-        console.error('Failed to copy link:', err);
-        alert('Failed to copy link. Here it is: ' + roomLink);
-    });
-}
-
-function sendChatMessage() {
-    const chatInput = document.getElementById('chatInput');
-    const message = chatInput.value.trim();
-    if (message && roomId) {
-        const userName = Cookies.get('userName') || 'Anonymous';
-        db.ref(`rooms/${roomId}/messages`).push({
-            user: userName,
-            text: message,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-        chatInput.value = '';
-    }
-}
-
-function displayChatMessage(user, text) {
-    const chatMessagesElement = document.getElementById('chatMessages');
-    const messageDiv = document.createElement('div');
-    messageDiv.textContent = `${user}: ${text}`;
-    chatMessagesElement.appendChild(messageDiv);
-    chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
-}
-
-function nextEpisode() {
-    if (currentEpisodeIndex + 1 < currentEpisodes.length) {
-        currentEpisodeIndex++;
-        document.getElementById('episodeSelect').value = currentEpisodeIndex;
-        changeServer();
-        if (watchTogetherActive && roomId) {
-            db.ref(`rooms/${roomId}/state`).update({
-                episodeIndex: currentEpisodeIndex,
-                time: 0,
-                playing: false,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-        }
-    }
-}
-
-async function loadPopularMovies() {
-    const movieGrid = document.getElementById('movieGrid');
-    const tvGrid = document.getElementById('tvGrid');
-    movieGrid.innerHTML = '';
-    tvGrid.innerHTML = '';
-    try {
-        const movieResponse = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}`);
-        const tvResponse = await fetch(`${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}`);
-        const movieData = await movieResponse.json();
-        const tvData = await tvResponse.json();
-        displayResults(movieData.results, movieGrid);
-        displayResults(tvData.results, tvGrid);
-    } catch (error) {
-        console.error('Error loading popular content:', error);
+    const deleteBtn = document.getElementById('deleteScreenshotBtn');
+    if (deleteBtn) {
+        deleteBtn.onclick = () => deleteScreenshot(currentScreenshots[newIndex]);
     }
 }
 
@@ -856,6 +698,9 @@ function closeSettings() {
 }
 
 function changeTheme(theme) {
+    const user = auth.currentUser;
+    if (!user) return;
+
     const themes = {
         orange: { color: '#ff4500', rgb: '255, 69, 0' },
         red: { color: '#ff0000', rgb: '255, 0, 0' },
@@ -866,11 +711,17 @@ function changeTheme(theme) {
         pink: { color: '#FFC0CB', rgb: '255, 192, 203' },
         gray: { color: '#808080', rgb: '128, 128, 128' }
     };
-    const selectedTheme = themes[theme];
+    const selectedTheme = themes[theme] || themes['orange'];
     document.documentElement.style.setProperty('--theme-color', selectedTheme.color);
     document.documentElement.style.setProperty('--theme-rgb', selectedTheme.rgb);
-    Cookies.set('theme', theme, { expires: 365 });
-    currentTheme = theme;
+
+    db.ref(`users/${user.uid}`).update({ theme: theme }).then(() => {
+        console.log(`Theme '${theme}' saved to Firebase for user ${user.uid}`);
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) themeSelect.value = theme;
+    }).catch(error => {
+        console.error('Error saving theme to Firebase:', error);
+    });
 }
 
 function applyTheme(theme) {
@@ -884,9 +735,24 @@ function applyTheme(theme) {
         pink: { color: '#FFC0CB', rgb: '255, 192, 203' },
         gray: { color: '#808080', rgb: '128, 128, 128' }
     };
-    const selectedTheme = themes[theme];
+    const selectedTheme = themes[theme] || themes['orange'];
     document.documentElement.style.setProperty('--theme-color', selectedTheme.color);
     document.documentElement.style.setProperty('--theme-rgb', selectedTheme.rgb);
+}
+
+function loadAndApplyTheme(uid) {
+    db.ref(`users/${uid}/theme`).once('value', (snapshot) => {
+        const theme = snapshot.val() || 'orange';
+        applyTheme(theme);
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) themeSelect.value = theme;
+        console.log(`Loaded theme '${theme}' from Firebase for user ${uid}`);
+    }).catch(error => {
+        console.error('Error loading theme from Firebase:', error);
+        applyTheme('orange');
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) themeSelect.value = 'orange';
+    });
 }
 
 async function getRandomMovie() {
@@ -895,7 +761,7 @@ async function getRandomMovie() {
         const data = await response.json();
         if (data.results && data.results.length > 0) {
             const randomIndex = Math.floor(Math.random() * data.results.length);
-            showContentPlayer(data.results[randomIndex]);
+            window.location.href = `player.html?contentId=${data.results[randomIndex].id}&mediaType=movie`;
         } else {
             alert('No movies available.');
         }
@@ -911,7 +777,7 @@ async function getRandomSeries() {
         const data = await response.json();
         if (data.results && data.results.length > 0) {
             const randomIndex = Math.floor(Math.random() * data.results.length);
-            showContentPlayer(data.results[randomIndex]);
+            window.location.href = `player.html?contentId=${data.results[randomIndex].id}&mediaType=tv`;
         } else {
             alert('No series available.');
         }
@@ -926,5 +792,27 @@ document.getElementById('searchInput').addEventListener('keypress', function(e) 
 });
 
 window.onload = () => {
-    checkCookieConsent();
+    initializeSupabase();
+    checkAuthState();
 };
+
+// Welcome message logic
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if the welcome message has already been shown in this session
+    if (sessionStorage.getItem('welcomeShown') !== 'true') {
+        // Show the welcome message
+        showWelcomeMessage();
+        // Set the flag in sessionStorage
+        sessionStorage.setItem('welcomeShown', 'true');
+    }
+});
+
+function showWelcomeMessage() {
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    welcomeMessage.innerHTML = 'Welcome to the Website!';
+    welcomeMessage.style.display = 'block'; // Make it visible
+    // Hide the message after 2 seconds
+    setTimeout(() => {
+        welcomeMessage.style.display = 'none';
+    }, 2000);
+}

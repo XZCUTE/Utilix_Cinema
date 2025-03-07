@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skibidi Meme Party - Support & Donate</title>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat&display=swap" rel="stylesheet">
+  <style>
+    /* Fullscreen container with a vibrant, animated background */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(270deg, #ff9a9e, #fad0c4, #a1c4fd, #c2e9fb);
+      background-size: 400% 400%;
+      animation: bgAnimation 10s ease infinite;
+      font-family: 'Comic Sans MS', 'Arial', sans-serif;
+      position: relative;
+    }
+    @keyframes bgAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* Navigation Buttons */
+    .nav-btn {
+      position: absolute;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 1.2em;
+      z-index: 10;
+    }
+    .home-btn {
+      top: 10px;
+      left: 10px;
+      background: linear-gradient(45deg, #ff0066, #ffcc00);
+      color: #fff;
+      animation: pulse 1s infinite, bounce 2s infinite;
+      box-shadow: 0 0 15px #ff0066;
+    }
+    .home-btn:hover {
+      transform: scale(1.2);
+      background: linear-gradient(45deg, #ffcc00, #66ff66);
+      animation: none;
+    }
+    .mail-btn {
+      top: 10px;
+      right: 10px;
+      background: linear-gradient(45deg, #0066ff, #00ffcc);
+      color: #fff;
+      animation: pulse 0.8s infinite, bounce 1.5s infinite, rotate 3s infinite;
+      box-shadow: 0 0 15px #0066ff;
+    }
+    .mail-btn:hover {
+      transform: scale(1.3) rotate(10deg);
+      background: linear-gradient(45deg, #ff00ff, #ffff00);
+      animation: none;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+      50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+      100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(5deg); }
+      100% { transform: rotate(0deg); }
+    }
+    
+    /* Support Box - Centered with extra effects */
+    .support-box {
+      position: relative;
+      background: linear-gradient(145deg, #ff99cc, #ffff99, #99ff99);
+      padding: 40px 60px;
+      border-radius: 20px;
+      box-shadow: 0 0 25px rgba(255,255,255,0.9);
+      text-align: center;
+      animation: popin 1s ease-out forwards, wobble 3s infinite;
+      transform: scale(0.5);
+      transition: transform 0.3s ease;
+      overflow: hidden;
+      z-index: 5;
+    }
+    @keyframes popin {
+      to { transform: scale(1); }
+    }
+    @keyframes wobble {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(3deg); }
+      50% { transform: rotate(0deg); }
+      75% { transform: rotate(-3deg); }
+      100% { transform: rotate(0deg); }
+    }
+    .support-box h2 {
+      font-size: 2.8em;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #ff0066, #ffcc00, #66ff66, #0066ff, #ff0066);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow 4s linear infinite;
+    }
+    @keyframes rainbow {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 100% 0%; }
+    }
+    .support-box p {
+      font-size: 1.3em;
+      margin-bottom: 15px;
+      color: #fff;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+      animation: textBounce 2s infinite;
+    }
+    @keyframes textBounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    /* Spam Meme Background Elements */
+    .meme-bg {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      background-size: cover;
+      opacity: 0.4;
+      z-index: -1;
+      animation: float 4s infinite, rotate 6s infinite;
+    }
+    @keyframes float {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+      100% { transform: translateY(0); }
+    }
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(10deg); }
+      100% { transform: rotate(0deg); }
+    }
+    
+    /* Letter Container (for silly letter appreciation) */
+    #letter {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      height: 350px;
+      background: #fff;
+      border: 3px solid #000;
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
+      z-index: 100;
+      display: none;
+    }
+    /* Paper flaps for opening/closing animation */
+    .paper-flap {
+      position: absolute;
+      width: 100%;
+      height: 50%;
+      background: #fff;
+      transform-origin: center;
+      transition: transform 0.6s ease;
+    }
+    .top {
+      top: 0;
+      transform: rotateX(0deg);
+    }
+    .bottom {
+      bottom: 0;
+      transform: rotateX(0deg);
+    }
+    #letter.open .top {
+      transform: rotateX(-90deg);
+    }
+    #letter.open .bottom {
+      transform: rotateX(90deg);
+    }
+    /* Letter content without images */
+    #letterContent {
+      position: relative;
+      padding: 30px;
+      font-family: 'Caveat', cursive;
+      font-size: 1.8em;
+      color: #333;
+      text-align: center;
+      height: 100%;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    /* Cute "X" Close Button */
+    #closeLetter {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: #ff4444;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px #ff4444;
+      font-size: 1.4em;
+      transition: transform 0.2s ease;
+    }
+    #closeLetter:hover {
+      transform: scale(1.2);
+      background: #ff6666;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Buttons -->
+  <button class="nav-btn home-btn" onclick="window.location.href='index.html'" aria-label="Home">Home</button>
+  <button class="nav-btn mail-btn" aria-label="Mail">Mail</button>
+
+  <!-- Spam Meme Background (more memes for extra fun!) -->
+  <div class="meme-bg" style="top: 5%; left: 5%; background-image: url('https://via.placeholder.com/80?text=Meme1'); animation-duration: 4s, 6s;"></div>
+  <div class="meme-bg" style="top: 10%; left: 30%; background-image: url('https://via.placeholder.com/80?text=Meme2'); animation-duration: 3.5s, 5s;"></div>
+  <div class="meme-bg" style="top: 20%; left: 70%; background-image: url('https://via.placeholder.com/80?text=Meme3'); animation-duration: 4.2s, 7s;"></div>
+  <div class="meme-bg" style="top: 35%; left: 20%; background-image: url('https://via.placeholder.com/80?text=Meme4'); animation-duration: 3.8s, 6.5s;"></div>
+  <div class="meme-bg" style="top: 45%; left: 80%; background-image: url('https://via.placeholder.com/80?text=Meme5'); animation-duration: 4s, 5.5s;"></div>
+  <div class="meme-bg" style="top: 55%; left: 40%; background-image: url('https://via.placeholder.com/80?text=Meme6'); animation-duration: 3.6s, 6s;"></div>
+  <div class="meme-bg" style="top: 65%; left: 60%; background-image: url('https://via.placeholder.com/80?text=Meme7'); animation-duration: 4.1s, 7s;"></div>
+  <div class="meme-bg" style="top: 75%; left: 15%; background-image: url('https://via.placeholder.com/80?text=Meme8'); animation-duration: 3.9s, 5.8s;"></div>
+  <div class="meme-bg" style="top: 85%; left: 70%; background-image: url('https://via.placeholder.com/80?text=Meme9'); animation-duration: 4.3s, 6.2s;"></div>
+  <div class="meme-bg" style="top: 25%; left: 50%; background-image: url('https://via.placeholder.com/80?text=Meme10'); animation-duration: 3.7s, 6.8s;"></div>
+  <!-- You can add even more meme-bg divs as needed! -->
+
+  <!-- Support Box (Centered) -->
+  <div class="support-box">
+    <h2>Support & Donate</h2>
+    <p><strong>Buy Me a Coffee / Sponsor Me!</strong></p>
+    <p>Every bit of love keeps me hoppin’ and coding like a maniac!</p>
+    <p id="gcash"><strong>GCash:</strong> 09912159697</p>
+    <p>You’re the BESTEST ever! 😍</p>
+  </div>
+
+  <!-- Silly Letter Container (Images removed) -->
+  <div id="letter" role="dialog">
+    <div class="paper-flap top"></div>
+    <div class="paper-flap bottom"></div>
+    <div id="letterContent">
+      <!-- Insert your silly letter text here -->
+      <p>
+        Dear Most Magnificent and Fantastically Silly Visitor,
+
+I hope this letter finds you in a state of absolute whimsy and delightful wonder. I must confess, as I sit here amidst a delightful array of dancing penguins (or so it seems in my wildest daydreams), I am overwhelmed with joy and gratitude that you have graced my humble demo website with your splendid presence. Your visit is like a burst of confetti in the drab world of everyday monotony—a truly magnificent explosion of silliness that leaves me beaming with delight!
+
+It is with a heart full of chuckles and a mind buzzing with the excitement of a thousand dancing bananas that I extend my sincerest appreciation to you. In a universe filled with countless websites and endless digital distractions, you chose to embark on this quirky journey with me. I can only imagine that the cosmic alignment of stars and the mischievous antics of internet gremlins conspired to lead you to this corner of the web, and for that, I am eternally grateful.
+
+Your visit is like a secret handshake between the universe and my little corner of digital creativity. Every click, every scroll, and every lingering glance you bestow upon my demo website transforms it into a vibrant carnival of endless possibilities. I am in awe of your adventurous spirit, your curiosity, and your willingness to dive headfirst into the delightful chaos of my work-in-progress. You, dear friend, are the true hero in this grand, silly escapade.
+
+Allow me to take you on a whimsical journey through my heartfelt gratitude. Imagine, if you will, a world where unicorns serve glittery cupcakes to joyful kittens, where rainbows are painted with the laughter of enchanted gnomes, and where every sunset is celebrated with a spontaneous dance party among the stars. That is the world I see when I think of your visit—a place of magic, absurdity, and unbridled delight.
+
+Your presence has not only brightened my day but has also ignited a spark of creativity that will fuel my endeavors to create even more captivating and whimsical digital experiences. I pledge to transform every line of code, every pixel, and every fleeting moment of inspiration into a masterpiece of playful ingenuity. It is my promise to you that my demo website will evolve into a wonderland of surprises, where each visit is an adventure and every click unveils a new layer of fun.
+
+I must also express my sincere admiration for your impeccable taste in online experiences. In the vast expanse of the internet, where countless websites vie for your attention, your discerning eye has chosen to grace mine with its esteemed presence. It is as if the universe itself has orchestrated this meeting of kindred spirits, and I am left in awe of the serendipity that brought us together.
+
+As you continue to explore the quirky realms of my demo website, know that your support and enthusiasm are like a refreshing breeze on a scorching summer day. They inspire me to push the boundaries of creativity and to infuse every corner of this digital domain with a sense of wonder and delight. Your visit is not merely a statistic in analytics; it is a cherished moment in the tapestry of my creative journey.
+
+Imagine a parade of exuberant clowns riding on the backs of majestic dolphins, with confetti swirling through the air as they march in perfect harmony to the tune of tap-dancing robots. That is the level of exuberance and joy I feel when I think of you exploring my humble website. Your presence turns ordinary code into a symphony of playful rhythms and transforms a simple webpage into a celebration of life’s most whimsical moments.
+
+I hope that every time you visit, you are greeted with a warm, digital hug and a burst of laughter that lingers in your heart. May your journey through this site be filled with delightful surprises, quirky animations, and moments that make you smile so broadly that your cheeks ache with happiness. I am committed to making this digital space a haven of lighthearted fun—a place where the ordinary is transformed into the extraordinary through the magic of creativity and a touch of silliness.
+
+Now, dear friend, allow me to further elaborate on the unparalleled wonder of your support. Picture a delightful mix of a circus and a science fair, where each gadget and gizmo is imbued with a sense of playful mischief. Your presence on this demo website is akin to discovering a hidden treasure chest filled with shimmering gold and glistening giggles. It is the kind of discovery that makes you want to shout out, "Huzzah!" and then do a little jig of joy.
+
+In this brave new world of digital absurdity, your visit serves as a beacon of light that guides the way to ever greater heights of hilarity and innovation. With every click, you help transform my demo website from a simple collection of code into a veritable festival of fun and fancy-free imagination. I am so grateful for your energy, your quirky charm, and your willingness to be part of this wild experiment in creativity.
+
+To express my gratitude in the most ludicrous and exuberant manner possible, I have compiled a list of fantastically silly reasons why your visit is the highlight of my day:
+
+Your click is like a secret spell that summons a choir of giggling fairies.
+Your curiosity is the spark that lights up a cosmic fireworks display in my creative heart.
+Your presence transforms mundane pixels into a dazzling mosaic of whimsy and wonder.
+Your support is as refreshing as a banana split on a hot summer day, drizzled with extra sprinkles of joy.
+Each of these reasons is a testament to the magical impact you have on this humble website. It is my fervent hope that every moment you spend here is filled with the same delight and merriment that you bring to my creative endeavors. I eagerly anticipate the day when you return, ready to embark on another adventure through this world of digital dreams and delightful drollery.
+
+In conclusion, I extend to you my most heartfelt thanks for gracing my demo website with your fantastically silly presence. Your support is a treasure beyond measure—a radiant gem in the crown of my creative journey. May you always find joy in the unexpected, laughter in the mundane, and a sprinkle of magic in every click.
+
+With infinite gratitude, quirky cheers, and a perpetual smile, [Your Name Here]
+
+P.S. If you ever feel like sharing a dash of your own delightful silliness or simply wish to revel in the spirit of absurdity, know that my demo website is always here, waiting with open arms and a joyful heart to celebrate the wondrous, unpredictable, and endlessly entertaining dance of life. I thank you, oh illustrious visitor, for being the magnificent, quirky, and utterly delightful soul that you are. Your support fuels my creative rocket, launching it into galaxies of inspiration where even the stars giggle and dance in celebration. Every click, every smile, and every moment you share with this humble website is cherished beyond measure. It is in your honor that I continue to code with passion, dreaming of a future where every digital encounter is as magical and joyous as a carnival of laughing llamas under a sky filled with twinkling, mischievous fireflies. May your days be as bright as a disco ball in a field of sunflowers, and may your nights be filled with the soft hum of cosmic lullabies sung by a chorus of enchanted crickets. You are not just a visitor; you are a cherished part of this creative journey—a whimsical muse that inspires each keystroke and every burst of innovative genius. I eagerly await the next time you return to this magical space, where we will once again share in the delightful absurdity and unbridled joy that makes life so incredibly extraordinary. Thank you, dear visitor, for being the spark that ignites my creative fire. Your presence is a gift—a delightful reminder that even in the vast, boundless realm of the internet, kindness and whimsy still reign supreme. Together, let us continue this fantastical adventure, hand in hand, heart to heart, in a celebration of life’s most absurd and beautiful moments.
+
+
+      </p>
+    </div>
+    <button id="closeLetter" aria-label="Close">X</button>
+  </div>
+
+  <!-- Audio: Auto-play Sigma Boy Unlocked Music (ensure proper URL to your music file) -->
+  <audio id="memeSound" src="https://www.myinstants.com/media/sounds/meme-sound.mp3" autoplay loop></audio>
+
+  <!-- Include canvas-confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+  <script>
+    // Mail button click: open letter and play confetti burst
+    document.querySelector('.mail-btn').addEventListener('click', () => {
+      const letter = document.getElementById('letter');
+      letter.style.display = 'block';
+      setTimeout(() => {
+        letter.classList.add('open');
+        confetti({
+          particleCount: 150,
+          spread: 90,
+          origin: { y: 0.6 },
+          colors: ['#ff0066', '#ffcc00', '#66ff66', '#0066ff']
+        });
+      }, 10);
+    });
+
+    // Close letter button
+    document.getElementById('closeLetter').addEventListener('click', () => {
+      const letter = document.getElementById('letter');
+      letter.classList.remove('open');
+      setTimeout(() => {
+        letter.style.display = 'none';
+      }, 600); // match the animation duration
+    });
+
+    // Close letter with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('letter').style.display === 'block') {
+        document.getElementById('closeLetter').click();
+      }
+    });
+
+    // Extra confetti on GCash hover for more fun!
+    document.getElementById('gcash').addEventListener('mouseover', () => {
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#ff0066', '#ffcc00', '#66ff66']
+      });
+    });
+  </script>
+</body>
+</html>
