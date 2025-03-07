@@ -17,7 +17,7 @@
             <button id="animeMode" class="nav-btn" aria-label="Anime" onclick="switchMode('anime')">Animation</button>
             <button id="libraryMode" class="nav-btn" aria-label="Library" onclick="switchMode('library')">Library</button>
             <button id="watchRoomMode" class="nav-btn" aria-label="Watch Room" onclick="window.location.href='watchroom.html'">Watch Room</button>
-            <button class="categories-toggle" aria-label="Toggle Categories" onclick="toggleSettings()">Categories ▼</button>
+            <button class="categories-toggle" aria-label="Toggle Categories" onclick="toggleCategories()">Categories ▼</button>
         </nav>
         <button class="menu-toggle" aria-label="Toggle Menu" onclick="document.getElementById('sidebar').classList.toggle('active')">☰</button>
         <div class="search-container">
@@ -33,8 +33,8 @@
             <h3>Categories</h3>
             <ul id="movieNav"></ul>
             <div class="modal-content categories-popup">
-                <span class="close" aria-label="Close Categories" onclick="closeCategoriesPopup()">×</span>
                 <div class="category-buttons">
+                    <!--SIDEBAR FOR PHONES ETC-->
                     <button class="category-btn" onclick="loadCategoryAndClose('action')">💥 Action</button>
                     <button class="category-btn" onclick="loadCategoryAndClose('adventure')">🚀 Adventure</button>
                     <button class="category-btn" onclick="loadCategoryAndClose('comedy')">😂 Comedy</button>
@@ -145,7 +145,6 @@
         <div id="welcomeMessage" style="display: none;"></div>
         <div id="categoriesPopup" class="modal" style="display: none;">
             <div class="modal-content categories-popup">
-                <span class="close" aria-label="Close Categories" onclick="closeCategoriesPopup()">×</span>
                 <div class="category-buttons">
                     <button class="category-btn" onclick="loadCategoryAndClose('action')">💥 Action</button>
                     <button class="category-btn" onclick="loadCategoryAndClose('adventure')">🚀 Adventure</button>

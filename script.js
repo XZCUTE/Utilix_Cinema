@@ -212,8 +212,23 @@ function toggleSettings() {
     }
 }
 
+function toggleCategories() {
+    const categoriesPopup = document.getElementById('categoriesPopup');
+    if (categoriesPopup.style.display === 'block') {
+        categoriesPopup.style.display = 'none';
+    } else {
+        categoriesPopup.style.display = 'block';
+        loadTheme();
+    }
+}
+
+
 function closeSettings() {
     document.getElementById('settingsModal').style.display = 'none';
+}
+
+function closeCategories() {
+    document.getElementById('categoriesPopup').style.display = 'none';
 }
 
 function loadCategoryAndClose(genre) {
