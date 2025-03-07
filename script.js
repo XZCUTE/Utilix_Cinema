@@ -13,9 +13,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
-const provider = new firebase.auth.GoogleAuthProvider();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-// Supabase Configuration (for Storage)
+// Supabase Configuration
 const supabaseUrl = 'https://dwzucqiiclqzygmalslb.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3enVjcWlpY2xxenlnbWFsc2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMDAwNjIsImV4cCI6MjA1Njc3NjA2Mn0.EKEBejFrejDo0V56AeVS21lREQ5rahFGaInzACI03XA';
 let supabaseClient = null;
@@ -26,13 +26,11 @@ async function initializeSupabase(maxRetries = 5, delay = 500) {
         if (typeof supabase !== 'undefined') {
             try {
                 supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-                console.log('Supabase client initialized');
                 const user = auth.currentUser;
                 if (user) {
                     const token = await user.getIdToken(true);
                     const { data, error } = await supabaseClient.auth.setSession({ access_token: token });
                     if (error) console.error('Error setting Supabase session:', error.message);
-                    else console.log('Supabase authenticated with Firebase token', data);
                 }
                 return true;
             } catch (err) {
@@ -40,7 +38,6 @@ async function initializeSupabase(maxRetries = 5, delay = 500) {
                 return false;
             }
         }
-        console.log(`Waiting for Supabase SDK to load... (Attempt ${retries + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
         retries++;
     }
@@ -56,7 +53,6 @@ let currentMode = 'movie';
 let clickCount = {};
 let currentScreenshots = [];
 
-// Infinite Scroll Variables
 let moviePage = 1;
 let movieTotalPages = 1;
 let tvPage = 1;
@@ -64,24 +60,22 @@ let tvTotalPages = 1;
 let isLoadingMovies = false;
 let isLoadingTV = false;
 
-// Intersection Observer for Infinite Scroll
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
-            if (entry.target.id === 'movieSentinel' && !isLoadingMovies) {
-                loadMoreMovies();
-            } else if (entry.target.id === 'tvSentinel' && !isLoadingTV) {
-                loadMoreTVShows();
-            }
+            if (entry.target.id === 'movieSentinel' && !isLoadingMovies) loadMoreMovies();
+            else if (entry.target.id === 'tvSentinel' && !isLoadingTV) loadMoreTVShows();
         }
     });
 }, { root: null, rootMargin: '0px', threshold: 0.1 });
 
 function checkAuthState() {
     auth.onAuthStateChanged((user) => {
+        const loginPrompt = document.getElementById('loginPrompt');
         if (user) {
+            if (loginPrompt) loginPrompt.remove();
             document.getElementById('signOutBtn').style.display = 'inline-block';
-            showWelcomeMessage(user.displayName || 'User');
+            showWelcomeMessage(user.displayName || 'Guest');
             loadAndApplyTheme(user.uid);
             loadAllContent();
             loadLibrary();
@@ -89,7 +83,7 @@ function checkAuthState() {
             switchModeFromUrl();
             initializeSupabase();
         } else {
-            showLoginPrompt();
+            if (!loginPrompt) showLoginPrompt();
         }
     });
 }
@@ -100,28 +94,273 @@ function showLoginPrompt() {
     loginPrompt.className = 'name-prompt';
     loginPrompt.innerHTML = `
         <h2>Please Sign In</h2>
-        <button onclick="signInWithGoogle()" aria-label="Sign in with Google">Sign in with Google</button>
+        <button id="googleSignInBtn" aria-label="Sign in with Google">Sign in with Google</button>
+        <button id="emailPassSignInBtn" aria-label="Sign in with Email/Password">Sign in with Email/Password</button>
+        <button id="emailLinkSignInBtn" aria-label="Sign in with Email Link">Sign in with Email Link</button>
+        <button id="qrSignInBtn" aria-label="Sign in with QR">Sign in with QR</button>
+        <button id="phoneSignInBtn" aria-label="Sign in with Phone">Sign in with Phone</button>
+        <button id="guestSignInBtn" aria-label="Sign in as Guest">Sign in as Guest</button>
     `;
     document.body.appendChild(loginPrompt);
+
+    document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+    document.getElementById('emailPassSignInBtn').addEventListener('click', showEmailPassSignInForm);
+    document.getElementById('emailLinkSignInBtn').addEventListener('click', showEmailLinkSignInForm);
+    document.getElementById('qrSignInBtn').addEventListener('click', showQRSignIn);
+    document.getElementById('phoneSignInBtn').addEventListener('click', showPhoneSignInForm);
+    document.getElementById('guestSignInBtn').addEventListener('click', signInAsGuest);
+}
+
+function showEmailPassSignInForm() {
+    const loginPrompt = document.getElementById('loginPrompt');
+    loginPrompt.innerHTML = `
+        <h2>Sign In with Email/Password</h2>
+        <input type="email" id="emailInput" placeholder="Email" aria-label="Email">
+        <input type="password" id="passwordInput" placeholder="Password" aria-label="Password">
+        <button id="emailPassSignIn" aria-label="Sign In">Sign In</button>
+        <p id="errorMessage" style="color: red; display: none;"></p>
+        <button id="backBtn" aria-label="Back">Back</button>
+    `;
+    document.getElementById('emailPassSignIn').addEventListener('click', signInWithEmailPassword);
+    document.getElementById('backBtn').addEventListener('click', () => window.location.reload());
+}
+
+function showEmailLinkSignInForm() {
+    const loginPrompt = document.getElementById('loginPrompt');
+    loginPrompt.innerHTML = `
+        <h2>Sign In with Email Link</h2>
+        <input type="email" id="emailInput" placeholder="Email" aria-label="Email">
+        <button id="sendLinkBtn" aria-label="Send Sign-In Link">Send Sign-In Link</button>
+        <p id="message" style="color: green; display: none;"></p>
+        <p id="errorMessage" style="color: red; display: none;"></p>
+        <button id="backBtn" aria-label="Back">Back</button>
+    `;
+    document.getElementById('sendLinkBtn').addEventListener('click', sendSignInLink);
+    document.getElementById('backBtn').addEventListener('click', () => window.location.reload());
+}
+
+function showQRSignIn() {
+    const loginPrompt = document.getElementById('loginPrompt');
+    loginPrompt.innerHTML = `
+        <h2>Sign In with QR</h2>
+        <p>Scan this QR code with your phone to sign in with Google</p>
+        <canvas id="qrcode" style="margin: 10px auto; display: block;"></canvas>
+        <p id="message" style="color: green; display: none;">Waiting for QR scan...</p>
+        <p id="errorMessage" style="color: red; display: none;"></p>
+        <button id="backBtn" aria-label="Back">Back</button>
+    `;
+
+    // Generate a unique session ID
+    const sessionId = db.ref('qrSessions').push().key;
+    const qrUrl = `https://utilix-cinema.pages.dev/signin?method=qr&sessionId=${sessionId}`;
+
+    // Load QRCode library and generate QR code
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js';
+    script.onload = () => {
+        QRCode.toCanvas(document.getElementById('qrcode'), qrUrl, { width: 200 }, (error) => {
+            if (error) {
+                console.error('Error generating QR code:', error);
+                document.getElementById('errorMessage').textContent = 'Failed to generate QR code.';
+                document.getElementById('errorMessage').style.display = 'block';
+            } else {
+                document.getElementById('message').textContent = 'Waiting for QR scan...';
+                document.getElementById('message').style.display = 'block';
+                listenForQRSignIn(sessionId);
+            }
+        });
+    };
+    script.onerror = () => {
+        document.getElementById('errorMessage').textContent = 'Failed to load QR code library.';
+        document.getElementById('errorMessage').style.display = 'block';
+    };
+    document.body.appendChild(script);
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+        db.ref(`qrSessions/${sessionId}`).remove(); // Clean up session
+        window.location.reload();
+    });
+}
+
+function listenForQRSignIn(sessionId) {
+    const sessionRef = db.ref(`qrSessions/${sessionId}`);
+    sessionRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.authenticated) {
+            auth.signInWithPopup(googleProvider)
+                .then(() => {
+                    sessionRef.remove(); // Clean up after successful sign-in
+                    document.getElementById('loginPrompt').remove();
+                    initializeSupabase();
+                })
+                .catch((error) => {
+                    document.getElementById('errorMessage').textContent = 'Sign-in failed: ' + error.message;
+                    document.getElementById('errorMessage').style.display = 'block';
+                });
+        }
+    });
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+        sessionRef.off();
+        if (document.getElementById('loginPrompt')) {
+            document.getElementById('errorMessage').textContent = 'QR code expired. Please try again.';
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+    }, 5 * 60 * 1000);
+}
+
+function showPhoneSignInForm() {
+    const loginPrompt = document.getElementById('loginPrompt');
+    loginPrompt.innerHTML = `
+        <h2>Sign In with Phone</h2>
+        <input type="tel" id="phoneInput" placeholder="+1234567890" aria-label="Phone Number">
+        <div id="recaptcha-container"></div>
+        <button id="sendPhoneCodeBtn" aria-label="Send Verification Code">Send Code</button>
+        <input type="text" id="verificationCode" placeholder="Enter Code" aria-label="Verification Code" style="display: none;">
+        <button id="verifyCodeBtn" aria-label="Verify Code" style="display: none;">Verify</button>
+        <p id="message" style="color: green; display: none;"></p>
+        <p id="errorMessage" style="color: red; display: none;"></p>
+        <button id="backBtn" aria-label="Back">Back</button>
+    `;
+    document.getElementById('sendPhoneCodeBtn').addEventListener('click', sendPhoneVerificationCode);
+    document.getElementById('verifyCodeBtn').addEventListener('click', verifyPhoneCode);
+    document.getElementById('backBtn').addEventListener('click', () => window.location.reload());
+
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        'size': 'normal',
+        'callback': () => document.getElementById('sendPhoneCodeBtn').disabled = false
+    });
+    recaptchaVerifier.render();
 }
 
 function signInWithGoogle() {
-    auth.signInWithPopup(provider)
-        .then((result) => {
-            console.log('User signed in:', result.user);
+    auth.signInWithPopup(googleProvider)
+        .then(() => {
             document.getElementById('loginPrompt').remove();
             initializeSupabase();
         })
         .catch((error) => {
-            console.error('Error during sign-in:', error);
             alert('Failed to sign in: ' + error.message);
+        });
+}
+
+function signInWithEmailPassword() {
+    const email = document.getElementById('emailInput').value;
+    const password = document.getElementById('passwordInput').value;
+    const errorMessage = document.getElementById('errorMessage');
+
+    if (!email || !password) {
+        errorMessage.textContent = 'Please enter email and password.';
+        errorMessage.style.display = 'block';
+        return;
+    }
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+            document.getElementById('loginPrompt').remove();
+        })
+        .catch((error) => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+        });
+}
+
+function sendSignInLink() {
+    const email = document.getElementById('emailInput').value;
+    const message = document.getElementById('message');
+    const errorMessage = document.getElementById('errorMessage');
+
+    if (!email) {
+        errorMessage.textContent = 'Please enter your email.';
+        errorMessage.style.display = 'block';
+        return;
+    }
+
+    const actionCodeSettings = {
+        url: 'https://utilix-cinema.pages.dev/finishSignUp',
+        handleCodeInApp: true,
+    };
+
+    auth.sendSignInLinkToEmail(email, actionCodeSettings)
+        .then(() => {
+            window.localStorage.setItem('emailForSignIn', email);
+            message.textContent = 'Sign-in link sent to your email. Check your inbox!';
+            message.style.display = 'block';
+            errorMessage.style.display = 'none';
+        })
+        .catch((error) => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+            message.style.display = 'none';
+        });
+}
+
+function handleEmailLinkSignIn() {
+    if (auth.isSignInWithEmailLink(window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) email = prompt('Please provide your email for confirmation');
+
+        auth.signInWithEmailLink(email, window.location.href)
+            .then(() => {
+                window.localStorage.removeItem('emailForSignIn');
+                document.getElementById('loginPrompt').remove();
+            })
+            .catch((error) => {
+                alert('Failed to sign in: ' + error.message);
+            });
+    }
+}
+
+function sendPhoneVerificationCode() {
+    const phoneNumber = document.getElementById('phoneInput').value;
+    const message = document.getElementById('message');
+    const errorMessage = document.getElementById('errorMessage');
+
+    auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+        .then((confirmationResult) => {
+            window.confirmationResult = confirmationResult;
+            message.textContent = 'Verification code sent to your phone.';
+            message.style.display = 'block';
+            errorMessage.style.display = 'none';
+            document.getElementById('verificationCode').style.display = 'block';
+            document.getElementById('verifyCodeBtn').style.display = 'block';
+            document.getElementById('sendPhoneCodeBtn').style.display = 'none';
+        })
+        .catch((error) => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+            message.style.display = 'none';
+        });
+}
+
+function verifyPhoneCode() {
+    const code = document.getElementById('verificationCode').value;
+    const errorMessage = document.getElementById('errorMessage');
+
+    window.confirmationResult.confirm(code)
+        .then(() => {
+            document.getElementById('loginPrompt').remove();
+        })
+        .catch((error) => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+        });
+}
+
+function signInAsGuest() {
+    auth.signInAnonymously()
+        .then(() => {
+            document.getElementById('loginPrompt').remove();
+        })
+        .catch((error) => {
+            alert('Failed to sign in as guest: ' + error.message);
         });
 }
 
 function signOut() {
     auth.signOut()
         .then(() => {
-            console.log('User signed out');
             window.location.reload();
         })
         .catch((error) => {
@@ -155,11 +394,9 @@ function loadAllContent() {
 
 function showWelcomeMessage(name) {
     const welcomeMessage = document.getElementById('welcomeMessage');
-    welcomeMessage.innerHTML = `Hi, ${name}<span style="color: #9370DB; font-weight: bold;">!</span><br><span style="color: #808080; font-size: 0.9rem;">Welcome to UTILIX CINEMA. Enjoy Watching</span>`;
+    welcomeMessage.innerHTML = `Hi, ${name}!<br><span style="color: #808080; font-size: 0.9rem;">Welcome to UTILIX CINEMA</span>`;
     welcomeMessage.style.display = 'block';
-    setTimeout(() => {
-        welcomeMessage.style.display = 'none';
-    }, 2000);
+    setTimeout(() => welcomeMessage.style.display = 'none', 2000);
 }
 
 async function switchMode(mode) {
@@ -197,31 +434,18 @@ async function switchMode(mode) {
 function switchModeFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
-    if (mode && ['movie', 'anime', 'library'].includes(mode)) {
-        switchMode(mode);
-    }
+    if (mode && ['movie', 'anime', 'library'].includes(mode)) switchMode(mode);
 }
 
 function toggleSettings() {
     const settingsModal = document.getElementById('settingsModal');
-    if (settingsModal.style.display === 'block') {
-        settingsModal.style.display = 'none';
-    } else {
-        settingsModal.style.display = 'block';
-        loadTheme();
-    }
+    settingsModal.style.display = settingsModal.style.display === 'block' ? 'none' : 'block';
 }
 
 function toggleCategories() {
     const categoriesPopup = document.getElementById('categoriesPopup');
-    if (categoriesPopup.style.display === 'block') {
-        categoriesPopup.style.display = 'none';
-    } else {
-        categoriesPopup.style.display = 'block';
-        loadTheme();
-    }
+    categoriesPopup.style.display = categoriesPopup.style.display === 'block' ? 'none' : 'block';
 }
-
 
 function closeSettings() {
     document.getElementById('settingsModal').style.display = 'none';
@@ -233,7 +457,7 @@ function closeCategories() {
 
 function loadCategoryAndClose(genre) {
     loadCategory(genre);
-    closeCategoriesPopup();
+    closeCategories();
 }
 
 async function searchContent() {
@@ -287,15 +511,9 @@ async function searchContent() {
             const librarySnapshot = await db.ref(`users/${user.uid}/library`).once('value');
             const library = librarySnapshot.val() || { movies: [], series: [], screenshots: [] };
 
-            const filteredMovies = (library.movies || []).filter(movie =>
-                movie.title.toLowerCase().includes(searchInput)
-            );
-            const filteredSeries = (library.series || []).filter(series =>
-                series.title.toLowerCase().includes(searchInput)
-            );
-            const filteredScreenshots = Object.values(library.screenshots || {}).filter(src =>
-                src.toLowerCase().includes(searchInput)
-            );
+            const filteredMovies = (library.movies || []).filter(movie => movie.title.toLowerCase().includes(searchInput));
+            const filteredSeries = (library.series || []).filter(series => series.title.toLowerCase().includes(searchInput));
+            const filteredScreenshots = Object.values(library.screenshots || {}).filter(src => src.toLowerCase().includes(searchInput));
 
             displayResults(filteredMovies, movieGrid);
             displayResults(filteredSeries, seriesGrid);
@@ -356,9 +574,7 @@ async function showSuggestions(query) {
 document.addEventListener('click', (e) => {
     const searchContainer = document.querySelector('.search-container');
     const suggestions = document.getElementById('suggestions');
-    if (!searchContainer.contains(e.target)) {
-        suggestions.style.display = 'none';
-    }
+    if (!searchContainer.contains(e.target)) suggestions.style.display = 'none';
 });
 
 async function loadCategory(genre) {
@@ -419,7 +635,6 @@ async function loadAllAnimeSections() {
     }
 }
 
-// Create a loading indicator element
 function createLoadingIndicator() {
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'loading-indicator';
@@ -427,12 +642,9 @@ function createLoadingIndicator() {
     return loadingDiv;
 }
 
-// Remove the loading indicator from the grid
 function removeLoadingIndicator(grid) {
     const loadingIndicator = grid.querySelector('.loading-indicator');
-    if (loadingIndicator) {
-        loadingIndicator.remove();
-    }
+    if (loadingIndicator) loadingIndicator.remove();
 }
 
 function displayResults(results, grid, append = false) {
@@ -457,7 +669,6 @@ function displayResults(results, grid, append = false) {
     }
 }
 
-// Load more movies with loading indicator
 async function loadMoreMovies() {
     if (isLoadingMovies || moviePage > movieTotalPages) return;
     isLoadingMovies = true;
@@ -467,7 +678,6 @@ async function loadMoreMovies() {
         observer.unobserve(existingSentinel);
         existingSentinel.remove();
     }
-    // Show loading indicator
     const loadingIndicator = createLoadingIndicator();
     movieGrid.appendChild(loadingIndicator);
     try {
@@ -493,7 +703,6 @@ async function loadMoreMovies() {
     }
 }
 
-// Load more TV shows with loading indicator
 async function loadMoreTVShows() {
     if (isLoadingTV || tvPage > tvTotalPages) return;
     isLoadingTV = true;
@@ -503,7 +712,6 @@ async function loadMoreTVShows() {
         observer.unobserve(existingSentinel);
         existingSentinel.remove();
     }
-    // Show loading indicator
     const loadingIndicator = createLoadingIndicator();
     tvGrid.appendChild(loadingIndicator);
     try {
@@ -544,17 +752,11 @@ async function loadLibrary() {
         const librarySnapshot = await db.ref(`users/${user.uid}/library`).once('value');
         const library = librarySnapshot.val() || { movies: [], series: [], screenshots: [] };
 
-        if (library.movies && library.movies.length > 0) {
-            displayResults(library.movies, movieGrid);
-        } else {
-            movieGrid.innerHTML = '<p>No movies in library.</p>';
-        }
+        if (library.movies && library.movies.length > 0) displayResults(library.movies, movieGrid);
+        else movieGrid.innerHTML = '<p>No movies in library.</p>';
 
-        if (library.series && library.series.length > 0) {
-            displayResults(library.series, seriesGrid);
-        } else {
-            seriesGrid.innerHTML = '<p>No series in library.</p>';
-        }
+        if (library.series && library.series.length > 0) displayResults(library.series, seriesGrid);
+        else seriesGrid.innerHTML = '<p>No series in library.</p>';
 
         if (library.screenshots && Object.keys(library.screenshots).length > 0) {
             imageThumbnails.innerHTML = '';
@@ -584,42 +786,23 @@ async function deleteScreenshot(src) {
         return;
     }
 
-    if (!supabaseClient) {
-        console.warn('Supabase client not initialized, attempting to initialize...');
-        const initialized = await initializeSupabase();
-        if (!initialized || !supabaseClient) {
-            alert('Failed to initialize Supabase client. Please refresh the page and try again.');
-            return;
-        }
+    if (!supabaseClient && !await initializeSupabase()) {
+        alert('Failed to initialize storage. Please refresh and try again.');
+        return;
     }
 
     try {
         const filePath = src.split('/screenshots/')[1];
-        if (!filePath) {
-            throw new Error('Invalid file path extracted from URL: ' + src);
-        }
-        const { error: storageError } = await supabaseClient.storage
-            .from('screenshots')
-            .remove([filePath]);
-
-        if (storageError) {
-            console.error('Error deleting screenshot from Supabase:', storageError.message);
-            alert('Failed to delete screenshot from storage: ' + storageError.message);
-            return;
-        }
+        if (!filePath) throw new Error('Invalid file path: ' + src);
+        const { error: storageError } = await supabaseClient.storage.from('screenshots').remove([filePath]);
+        if (storageError) throw storageError;
 
         const screenshotsRef = db.ref(`users/${user.uid}/library/screenshots`);
         const snapshot = await screenshotsRef.once('value');
         const screenshots = snapshot.val() || {};
         const keyToDelete = Object.keys(screenshots).find(key => screenshots[key] === src);
 
-        if (keyToDelete) {
-            await screenshotsRef.child(keyToDelete).remove();
-            console.log('Screenshot deleted from Firebase:', src);
-        } else {
-            console.warn('No matching screenshot key found in Firebase for:', src);
-        }
-
+        if (keyToDelete) await screenshotsRef.child(keyToDelete).remove();
         closeImageViewer();
         loadLibrary();
         alert('Screenshot deleted successfully!');
@@ -632,10 +815,7 @@ async function deleteScreenshot(src) {
 function handleThumbnailClick(src, thumbnail) {
     const key = src;
     clickCount[key] = (clickCount[key] || 0) + 1;
-
-    if (clickCount[key] === 1) {
-        showImageViewer(src);
-    }
+    if (clickCount[key] === 1) showImageViewer(src);
 }
 
 function showImageViewer(src) {
@@ -672,8 +852,7 @@ function closeImageViewer() {
 
 function changeViewSize() {
     const size = document.getElementById('viewSizeSelect').value;
-    const viewerImage = document.getElementById('viewerImage');
-    viewerImage.className = `viewer-image ${size}`;
+    document.getElementById('viewerImage').className = `viewer-image ${size}`;
 }
 
 function prevImage() {
@@ -683,11 +862,7 @@ function prevImage() {
     viewerImage.src = currentScreenshots[newIndex];
     document.getElementById('viewSizeSelect').value = 'normal';
     viewerImage.className = 'viewer-image';
-
-    const deleteBtn = document.getElementById('deleteScreenshotBtn');
-    if (deleteBtn) {
-        deleteBtn.onclick = () => deleteScreenshot(currentScreenshots[newIndex]);
-    }
+    document.getElementById('deleteScreenshotBtn').onclick = () => deleteScreenshot(currentScreenshots[newIndex]);
 }
 
 function nextImage() {
@@ -697,19 +872,7 @@ function nextImage() {
     viewerImage.src = currentScreenshots[newIndex];
     document.getElementById('viewSizeSelect').value = 'normal';
     viewerImage.className = 'viewer-image';
-
-    const deleteBtn = document.getElementById('deleteScreenshotBtn');
-    if (deleteBtn) {
-        deleteBtn.onclick = () => deleteScreenshot(currentScreenshots[newIndex]);
-    }
-}
-
-function openSettings() {
-    document.getElementById('settingsModal').style.display = 'block';
-}
-
-function closeSettings() {
-    document.getElementById('settingsModal').style.display = 'none';
+    document.getElementById('deleteScreenshotBtn').onclick = () => deleteScreenshot(currentScreenshots[newIndex]);
 }
 
 function changeTheme(theme) {
@@ -730,13 +893,7 @@ function changeTheme(theme) {
     document.documentElement.style.setProperty('--theme-color', selectedTheme.color);
     document.documentElement.style.setProperty('--theme-rgb', selectedTheme.rgb);
 
-    db.ref(`users/${user.uid}`).update({ theme: theme }).then(() => {
-        console.log(`Theme '${theme}' saved to Firebase for user ${user.uid}`);
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) themeSelect.value = theme;
-    }).catch(error => {
-        console.error('Error saving theme to Firebase:', error);
-    });
+    db.ref(`users/${user.uid}`).update({ theme }).catch(error => console.error('Error saving theme:', error));
 }
 
 function applyTheme(theme) {
@@ -761,13 +918,7 @@ function loadAndApplyTheme(uid) {
         applyTheme(theme);
         const themeSelect = document.getElementById('themeSelect');
         if (themeSelect) themeSelect.value = theme;
-        console.log(`Loaded theme '${theme}' from Firebase for user ${uid}`);
-    }).catch(error => {
-        console.error('Error loading theme from Firebase:', error);
-        applyTheme('orange');
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) themeSelect.value = 'orange';
-    });
+    }).catch(() => applyTheme('orange'));
 }
 
 async function getRandomMovie() {
@@ -802,32 +953,12 @@ async function getRandomSeries() {
     }
 }
 
-document.getElementById('searchInput').addEventListener('keypress', function(e) {
+document.getElementById('searchInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') searchContent();
 });
 
 window.onload = () => {
     initializeSupabase();
     checkAuthState();
+    handleEmailLinkSignIn();
 };
-
-// Welcome message logic
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if the welcome message has already been shown in this session
-    if (sessionStorage.getItem('welcomeShown') !== 'true') {
-        // Show the welcome message
-        showWelcomeMessage();
-        // Set the flag in sessionStorage
-        sessionStorage.setItem('welcomeShown', 'true');
-    }
-});
-
-function showWelcomeMessage() {
-    const welcomeMessage = document.getElementById('welcomeMessage');
-    welcomeMessage.innerHTML = 'Welcome to the Website!';
-    welcomeMessage.style.display = 'block'; // Make it visible
-    // Hide the message after 2 seconds
-    setTimeout(() => {
-        welcomeMessage.style.display = 'none';
-    }, 2000);
-}

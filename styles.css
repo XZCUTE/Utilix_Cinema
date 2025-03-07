@@ -1142,4 +1142,40 @@ footer p:last-child {
     position: relative;
     z-index: 1000; /* Higher than the overlay's z-index */
 }
+
+.name-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.name-prompt input {
+  width: 80%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.name-prompt button {
+  background-color: var(--theme-color);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 10px 0;
+}
+
+.name-prompt button:hover {
+  opacity: 0.9;
+}
+
+.name-prompt #errorMessage {
+  margin: 10px 0;
+  font-size: 14px;
+}
 }
