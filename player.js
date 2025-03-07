@@ -348,14 +348,6 @@ function toggleFullscreen() {
     }
 }
 
-function toggleCinemaMode() {
-    isCinemaMode = !isCinemaMode;
-    const videoPlayer = document.getElementById('videoPlayer');
-    const playerContainer = document.querySelector('.player-container');
-    videoPlayer.classList.toggle('cinema-mode', isCinemaMode);
-    playerContainer.classList.toggle('cinema-mode', isCinemaMode);
-    document.body.classList.toggle('cinema-background', isCinemaMode);
-}
 
 function captureScreenshot() {
     const user = auth.currentUser;
