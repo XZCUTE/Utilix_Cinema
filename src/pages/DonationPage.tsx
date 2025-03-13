@@ -56,11 +56,11 @@ const DonationPage = () => {
               
               <div className="bg-background p-4 rounded-md mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">marktstarosa838@gmail.com</span>
+                  <span className="font-medium">markstarosa838@gmail.com</span>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => handleCopy("marktstarosa838@gmail.com", "PayPal email")}
+                    onClick={() => handleCopy("markstarosa838@gmail.com", "PayPal email")}
                     className="ml-2"
                   >
                     <Copy className="h-4 w-4 mr-1" /> Copy
