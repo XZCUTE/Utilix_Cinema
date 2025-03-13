@@ -1,0 +1,160 @@
+/* Responsive styles for different devices */
+
+/* Base styles for all devices */
+:root {
+  --header-height: 70px;
+  --content-padding: 1rem;
+}
+
+/* Mobile phones (portrait) */
+@media (max-width: 480px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Adjust card sizes for mobile */
+  .content-card {
+    width: 100% !important;
+    max-width: 250px;
+    margin: 0 auto;
+  }
+
+  /* Smaller text on mobile */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Adjust video player controls for touch */
+  .video-controls button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* Tablets and larger phones */
+@media (min-width: 481px) and (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Adjust grid for tablets */
+  .content-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  }
+}
+
+/* Small laptops */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Large screens and TVs */
+@media (min-width: 1025px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  /* Larger content for TV viewing */
+  .tv-mode .content-card {
+    width: 300px !important;
+    height: 450px !important;
+  }
+
+  .tv-mode h1 {
+    font-size: 2.5rem !important;
+  }
+}
+
+/* Smart TV specific */
+@media (min-width: 1920px) {
+  :root {
+    --header-height: 80px;
+    --content-padding: 2rem;
+  }
+
+  /* Larger text and controls for TV viewing distance */
+  body {
+    font-size: 18px;
+  }
+
+  button,
+  .button {
+    min-height: 48px;
+  }
+
+  .tv-mode .video-player {
+    height: 80vh !important;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) {
+  /* Larger touch targets */
+  button,
+  .button,
+  a {
+    padding: 0.5rem 1rem;
+  }
+
+  /* Improve touch feedback */
+  button:active,
+  .button:active,
+  a:active {
+    opacity: 0.7;
+  }
+}
+
+/* Landscape mode for phones */
+@media (max-height: 480px) and (orientation: landscape) {
+  .video-player {
+    height: 85vh !important;
+  }
+
+  /* Minimize UI elements in landscape video viewing */
+  .video-player-page .header {
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .video-player-page .header:hover {
+    opacity: 1;
+  }
+}
+
+/* High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+  :root {
+    --primary: 220 100% 50%;
+    --primary-foreground: 0 0% 100%;
+  }
+
+  .text-gray-400 {
+    color: white !important;
+  }
+
+  .border-gray-700 {
+    border-color: white !important;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
