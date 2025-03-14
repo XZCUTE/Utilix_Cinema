@@ -45,7 +45,37 @@ type ThemeType =
   | "royal-elegance"
   | "autumn-harvest"
   | "tech-noir"
-  | "serene-sky";
+  | "serene-sky"
+  | "pink-teal-cream"
+  | "orange-yellow"
+  | "fuchsia-dark"
+  | "green-red-white"
+  | "cream-black"
+  | "black-white"
+  | "dark-pink"
+  | "blue-mint"
+  | "red-black"
+  | "dark-green-ivory"
+  | "bright-green-pink"
+  | "yellow-green"
+  | "blue-shades"
+  | "lime-white"
+  | "beige-grey"
+  | "pastel-purple"
+  | "navy-electric"
+  | "stripe-gradient"
+  | "blue-lagoon"
+  | "horror-red"
+  | "slumber"
+  | "banky"
+  | "sothebys"
+  | "liberty"
+  | "imprint"
+  | "circus"
+  | "mila"
+  | "kelsey"
+  | "inside-head"
+  | "engineered";
 
 const profileSchema = z.object({
   displayName: z.string().min(2, {
@@ -500,13 +530,43 @@ const ProfilePage = () => {
                     { id: "royal-elegance", name: "Royal Elegance", color: "bg-purple-900" },
                     { id: "autumn-harvest", name: "Autumn Harvest", color: "bg-amber-800" },
                     { id: "tech-noir", name: "Tech Noir", color: "bg-blue-700" },
-                    { id: "serene-sky", name: "Serene Sky", color: "bg-blue-400" }
+                    { id: "serene-sky", name: "Serene Sky", color: "bg-blue-400" },
+                    { id: "pink-teal-cream", name: "Pink Teal Cream", color: "bg-[#FF78AC]" },
+                    { id: "orange-yellow", name: "Orange Yellow", color: "bg-[#FF921C]" },
+                    { id: "fuchsia-dark", name: "Fuchsia Dark", color: "bg-[#D8125B]" },
+                    { id: "green-red-white", name: "Green Red White", color: "bg-[#205A28]" },
+                    { id: "cream-black", name: "Cream Black", color: "bg-[#FFFDF2]" },
+                    { id: "black-white", name: "Black White", color: "bg-black" },
+                    { id: "dark-pink", name: "Dark Pink", color: "bg-[#970747]" },
+                    { id: "blue-mint", name: "Blue Mint", color: "bg-[#106EBE]" },
+                    { id: "red-black", name: "Red Black", color: "bg-[#B4121B]" },
+                    { id: "dark-green-ivory", name: "Dark Green Ivory", color: "bg-[#009B4D]" },
+                    { id: "bright-green-pink", name: "Bright Green Pink", color: "bg-[#31EC56]" },
+                    { id: "yellow-green", name: "Yellow Green", color: "bg-[#BAFF39]" },
+                    { id: "blue-shades", name: "Blue Shades", color: "bg-[#00ABE4]" },
+                    { id: "lime-white", name: "Lime White", color: "bg-[#00DD00]" },
+                    { id: "beige-grey", name: "Beige Grey", color: "bg-[#DDD0C8]" },
+                    { id: "pastel-purple", name: "Pastel Purple", color: "bg-[#C5ADC5]" },
+                    { id: "navy-electric", name: "Navy Electric", color: "bg-[#01257D]" },
+                    { id: "stripe-gradient", name: "Stripe Gradient", color: "bg-gradient-to-r from-[#F8F8F9] to-[#111439]" },
+                    { id: "blue-lagoon", name: "Blue Lagoon", color: "bg-[#96C2DB]" },
+                    { id: "horror-red", name: "Horror Red", color: "bg-[#E7473C]" },
+                    { id: "slumber", name: "Slumber", color: "bg-[#0A1828]" },
+                    { id: "banky", name: "Banky", color: "bg-[#FFCE32]" },
+                    { id: "sothebys", name: "Sothebys", color: "bg-[#002349]" },
+                    { id: "liberty", name: "Liberty", color: "bg-[#4F0341]" },
+                    { id: "imprint", name: "Imprint", color: "bg-[#4A8BDF]" },
+                    { id: "circus", name: "Circus", color: "bg-[#FFAB00]" },
+                    { id: "mila", name: "Mila", color: "bg-[#FF5841]" },
+                    { id: "kelsey", name: "Kelsey", color: "bg-[#FFD43A]" },
+                    { id: "inside-head", name: "Inside Head", color: "bg-[#5642A6]" },
+                    { id: "engineered", name: "Engineered", color: "bg-[#151515]" }
                   ].map((themeOption) => (
-                      <button
+                    <button
                       key={themeOption.id}
-                        className={`p-4 rounded-lg border transition-all ${
+                      className={`p-4 rounded-lg border transition-all ${
                         theme === themeOption.id
-                            ? "border-primary bg-primary/20"
+                          ? "border-primary bg-primary/20"
                           : "border-border bg-card/50 hover:bg-card/80"
                       }`}
                       onClick={() => setTheme(themeOption.id as ThemeType)}
@@ -521,42 +581,50 @@ const ProfilePage = () => {
                       </div>
                       <p className="text-sm font-medium text-center">
                         {themeOption.name}
-                        </p>
-                      </button>
+                      </p>
+                    </button>
                   ))}
                 </div>
               </div>
               
               {/* Theme Preview */}
-              <div className="mt-8 p-4 rounded-lg border border-border bg-card/50">
-                <h3 className="text-lg font-medium mb-4">Theme Preview</h3>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 p-4 rounded bg-background border border-border">
-                    <div className="h-6 mb-2 w-1/2 rounded bg-foreground/20"></div>
-                    <div className="h-10 mb-4 rounded bg-card">
-                      <div className="h-full w-1/4 rounded bg-primary"></div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="h-8 w-20 rounded bg-primary flex items-center justify-center">
-                        <div className="h-2 w-10 rounded-full bg-primary-foreground"></div>
-                      </div>
-                      <div className="h-8 w-20 rounded bg-accent flex items-center justify-center">
-                        <div className="h-2 w-10 rounded-full bg-accent-foreground"></div>
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <h2 className="text-xl font-semibold mb-4">Theme Preview</h2>
+                <div className="flex flex-col md:flex-row gap-8">
+                  <div className="flex-1">
+                    <div className="p-4 rounded-lg bg-background border border-border">
+                      <div className="w-40 h-10 mb-4 rounded-md bg-card/70"></div>
+                      
+                      <div className="flex gap-2 mb-4">
+                        <div className="flex-1 h-10 bg-primary rounded-md flex items-center justify-center">
+                          <div className="h-2 w-16 rounded-md bg-primary-foreground"></div>
+                        </div>
+                        <div className="flex-1 h-10 bg-muted rounded-md flex items-center justify-center">
+                          <div className="h-2 w-16 rounded-md bg-muted-foreground"></div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="p-2 rounded bg-background">
-                      <span className="text-xs text-foreground font-medium">Background</span>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-sm font-medium mb-2 block">Background</span>
+                      <div className="h-8 w-full bg-background border border-border rounded-md"></div>
                     </div>
-                    <div className="p-2 rounded bg-card">
-                      <span className="text-xs text-card-foreground font-medium">Card</span>
+                    
+                    <div>
+                      <span className="text-sm font-medium mb-2 block">Card</span>
+                      <div className="h-8 w-full bg-card border border-border rounded-md"></div>
                     </div>
-                    <div className="p-2 rounded bg-primary">
-                      <span className="text-xs text-primary-foreground font-medium">Primary</span>
+                    
+                    <div>
+                      <span className="text-sm font-medium mb-2 block">Primary</span>
+                      <div className="h-8 w-full bg-primary rounded-md"></div>
                     </div>
-                    <div className="p-2 rounded bg-accent">
-                      <span className="text-xs text-accent-foreground font-medium">Accent</span>
+                    
+                    <div>
+                      <span className="text-sm font-medium mb-2 block">Accent</span>
+                      <div className="h-8 w-full bg-accent rounded-md"></div>
                     </div>
                   </div>
                 </div>

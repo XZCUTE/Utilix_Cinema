@@ -53,9 +53,9 @@ const EpisodeSelector = ({
   };
 
   return (
-    <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
-      <div className="p-4 border-b border-gray-800">
-        <h3 className="text-lg font-semibold text-white">Episodes</h3>
+    <div className="bg-card rounded-lg overflow-hidden border border-border">
+      <div className="p-4 border-b border-border">
+        <h3 className="text-lg font-semibold">Episodes</h3>
       </div>
 
       <Tabs
@@ -64,7 +64,7 @@ const EpisodeSelector = ({
       >
         <div className="px-4 pt-2">
           <ScrollArea className="max-w-full">
-            <TabsList className="inline-flex w-auto h-9 bg-gray-800/50 p-1">
+            <TabsList className="inline-flex w-auto h-9 bg-muted/50 p-1">
               {seasons.map((season) => (
                 <TabsTrigger
                   key={season.season_number}
@@ -83,10 +83,10 @@ const EpisodeSelector = ({
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader className="h-8 w-8 text-primary animate-spin" />
-                <span className="ml-2 text-gray-400">Loading episodes...</span>
+                <span className="ml-2 text-muted-foreground">Loading episodes...</span>
               </div>
             ) : error ? (
-              <div className="text-center text-gray-400 py-8">
+              <div className="text-center text-muted-foreground py-8">
                 Failed to load episodes. Please try again.
               </div>
             ) : (
@@ -94,9 +94,9 @@ const EpisodeSelector = ({
                 {seasonData?.episodes?.map((episode: any) => (
                   <div
                     key={episode.id}
-                    className={`flex gap-3 p-2 rounded-lg transition-colors ${currentSeason === selectedSeason && currentEpisode === episode.episode_number ? "bg-primary/20" : "hover:bg-gray-800/50"}`}
+                    className={`flex gap-3 p-2 rounded-lg transition-colors ${currentSeason === selectedSeason && currentEpisode === episode.episode_number ? "bg-primary/20" : "hover:bg-muted/50"}`}
                   >
-                    <div className="flex-shrink-0 w-32 h-20 relative rounded overflow-hidden bg-gray-800">
+                    <div className="flex-shrink-0 w-32 h-20 relative rounded overflow-hidden bg-muted">
                       {episode.still_path ? (
                         <img
                           src={getTMDBImageUrl(
@@ -108,7 +108,7 @@ const EpisodeSelector = ({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-600">
+                        <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
                           No Image
                         </div>
                       )}
@@ -125,21 +125,21 @@ const EpisodeSelector = ({
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-white truncate">
+                        <h4 className="text-sm font-medium truncate">
                           {episode.episode_number}. {episode.name}
                         </h4>
-                        <div className="flex items-center text-xs text-gray-400">
+                        <div className="flex items-center text-xs text-muted-foreground">
                           <Star className="h-3 w-3 mr-1 text-yellow-500" />
                           {episode.vote_average.toFixed(1)}
                         </div>
                       </div>
 
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
                         <Calendar className="h-3 w-3 mr-1" />
                         {formatDate(episode.air_date)}
                       </div>
 
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                         {episode.overview || "No description available."}
                       </p>
                     </div>
