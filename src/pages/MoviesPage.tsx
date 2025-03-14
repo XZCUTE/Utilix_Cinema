@@ -15,6 +15,7 @@ const MoviesPage = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
   const [activeGenreId, setActiveGenreId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -77,6 +78,16 @@ const MoviesPage = () => {
       setActiveGenre(genreName);
       setActiveGenreId(genreId);
       setPage(1); // Reset page when changing genre
+    }
+  };
+
+  // Handle search
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      // Navigate to the main search page
+      navigate(`/search?q=${encodeURIComponent(query)}`);
+    } else {
+      setSearchQuery("");
     }
   };
 
@@ -143,6 +154,8 @@ const MoviesPage = () => {
         onGenreSelect={(genreName, genreId) =>
           handleGenreSelect(genreName, genreId)
         }
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
         activeGenre={activeGenre}
         contentType="movie"
         showGenreFilters={true}

@@ -2,13 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronUp, Filter, TrendingUp, ThumbsUp, Award } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, TrendingUp, ThumbsUp, Award, Search, X } from "lucide-react";
 import { useGenres } from "@/hooks/useTMDB";
+import { Input } from "@/components/ui/input";
 
 interface ContentFiltersProps {
   activeFilter?: string;
   onFilterChange?: (filter: string) => void;
   onGenreSelect?: (genre: string, genreId: number) => void;
+  onSearch?: (query: string) => void;
+  searchQuery?: string;
   activeGenre?: string | null;
   contentType?: "movie" | "tv" | "all";
   showGenreFilters?: boolean;
@@ -19,6 +22,8 @@ const ContentFilters = ({
   activeFilter = "popular",
   onFilterChange = () => {},
   onGenreSelect = () => {},
+  onSearch = () => {},
+  searchQuery = "",
   activeGenre = null,
   contentType = "all",
   showGenreFilters = false,
@@ -26,6 +31,7 @@ const ContentFilters = ({
 }: ContentFiltersProps) => {
   const [showGenres, setShowGenres] = useState(true);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
 
   // Fetch appropriate genres based on contentType
   const { data: movieGenres, loading: movieGenresLoading } = useGenres(
@@ -34,6 +40,11 @@ const ContentFilters = ({
   const { data: tvGenres, loading: tvGenresLoading } = useGenres(
     contentType === "all" ? "tv" : contentType,
   );
+
+  // Update local search query when prop changes
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   // Combine and deduplicate genres
   const allGenres = React.useMemo(() => {
@@ -63,6 +74,21 @@ const ContentFilters = ({
   // Clear all selected genres
   const clearGenres = () => {
     setSelectedGenres([]);
+  };
+
+  // Handle search submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (localSearchQuery.trim()) {
+      // Navigate to the main search page instead of filtering in-place
+      onSearch(localSearchQuery);
+    }
+  };
+
+  // Handle clearing search
+  const handleClearSearch = () => {
+    setLocalSearchQuery("");
+    onSearch("");
   };
 
   return (
@@ -149,6 +175,38 @@ const ContentFilters = ({
                   )}
                 </Button>
               </div>
+            </div>
+
+            {/* Search input for filtering content */}
+            <div className="mb-3">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <Input
+                  type="search"
+                  placeholder={`Search ${contentType === "movie" ? "movies" : contentType === "tv" ? "TV shows" : "content"}...`}
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                  className="pr-10 pl-4 py-2 bg-background border-border"
+                />
+                {localSearchQuery ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleClearSearch}
+                    className="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={16} />
+                  </Button>
+                ) : null}
+                <Button
+                  type="submit"
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
+                >
+                  <Search size={16} />
+                </Button>
+              </form>
             </div>
 
             {/* Genre Filter Panel - Always visible by default */}

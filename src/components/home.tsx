@@ -211,6 +211,26 @@ const Home = () => {
             }}
           />
         )}
+
+        {/* Browse Buttons */}
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-12 mb-6">
+          <Button
+            size="lg"
+            className="px-8 py-6 text-lg font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={() => navigate('/movies')}
+          >
+            <Film className="h-5 w-5" />
+            Browse Movies
+          </Button>
+          <Button
+            size="lg"
+            className="px-8 py-6 text-lg font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={() => navigate('/tv')}
+          >
+            <Tv className="h-5 w-5" />
+            Browse TV Shows
+          </Button>
+        </div>
       </div>
     </MainLayout>
   );

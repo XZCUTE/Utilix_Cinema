@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useMovieDetails, useTVShowDetails } from "@/hooks/useTMDB";
 import { getTMDBImageUrl } from "@/lib/tmdb";
@@ -26,7 +26,6 @@ import { useLibrary } from "@/context/LibraryContext";
 import { useWatchHistory } from "@/context/WatchHistoryContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { Toast } from "@/components/ui/toast";
-import WatchRoomButton from "@/components/player/WatchRoomButton";
 
 // Format runtime (for movies)
 const formatRuntime = (minutes: number) => {
@@ -51,9 +50,10 @@ const VideoPlayerPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthContext();
   const { theme } = useTheme();
-  const { addItem, isInLibrary, libraryItems } = useLibrary();
+  const { addItem, isInLibrary, libraryItems, removeItem } = useLibrary();
   const { addItem: addToHistory, updateProgress } = useWatchHistory();
   const { isFullyConnected: isOnline } = useOnlineStatus();
+  const videoPlayerRef = useRef<HTMLDivElement>(null);
 
   const [focusMode, setFocusMode] = useState(false);
   const [currentSeason, setCurrentSeason] = useState(parseInt(season || "1"));
@@ -68,6 +68,19 @@ const VideoPlayerPage = () => {
 
   const mediaType = type === "movie" ? "movie" : "tv";
   const contentId = id || "";
+
+  // Scroll to video player when the component mounts
+  useEffect(() => {
+    if (videoPlayerRef.current) {
+      // Use a slight delay to ensure the page has fully rendered
+      setTimeout(() => {
+        videoPlayerRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [id, type, season, episode]);
 
   // Log route parameters for debugging
   useEffect(() => {
@@ -145,12 +158,22 @@ const VideoPlayerPage = () => {
 
   // Improved check for items in library that works with the new structure
   const checkIsInLibrary = (itemId: string, mediaType: "movie" | "tv"): boolean => {
-    const items = mediaType === "movie" ? libraryItems.movies : libraryItems.series;
-    return items.some(item => item.id === itemId);
+    if (!itemId || !mediaType || !libraryItems) return false;
+    
+    try {
+      // Convert media type from "tv" to "series" for checking
+      const items = mediaType === "movie" ? libraryItems.movies : libraryItems.series;
+      
+      // Ensure we compare strings to handle numeric IDs correctly
+      return items.some(item => String(item.id) === String(itemId));
+    } catch (err) {
+      console.error("Error checking library:", err);
+      return false;
+    }
   };
 
-  // Handle add to library
-  const handleAddToLibrary = async () => {
+  // Handle library action (add or remove)
+  const handleLibraryAction = async () => {
     try {
       if (!isOnline) {
         setShowOfflineToast(true);
@@ -159,23 +182,46 @@ const VideoPlayerPage = () => {
       }
 
       if (!contentId || !mediaType || !contentTitle) {
-        console.error("Missing required data for adding to library");
+        console.error("Missing required data for library action");
         setShowErrorToast(true);
         setTimeout(() => setShowErrorToast(false), 3000);
         return;
       }
 
-      await addItem({
-        id: contentId,
-        mediaType: mediaType as "movie" | "tv",
-        title: contentTitle,
-        posterPath: contentData.poster_path,
-      });
+      // Safely check if the item is in library
+      const isItemInLibrary = checkIsInLibrary(contentId, mediaType as "movie" | "tv");
 
-      setShowAddedToast(true);
-      setTimeout(() => setShowAddedToast(false), 3000);
+      if (isItemInLibrary) {
+        // Remove from library
+        await removeItem(contentId, mediaType as "movie" | "tv");
+        console.log("Removed from library:", contentTitle);
+      } else {
+        // Add to library - create safe object with fallbacks
+        const posterPath = contentData?.poster_path || "";
+        
+        // Ensure we don't pass undefined/null values
+        const libraryItem = {
+          id: contentId,
+          mediaType: mediaType as "movie" | "tv",
+          title: contentTitle || "Unknown Title",
+          posterPath
+        };
+        
+        console.log("Adding to library:", libraryItem);
+        
+        // Add to library without awaiting to prevent potential UI freeze
+        addItem(libraryItem).catch(err => {
+          console.error("Error adding to library:", err);
+          setShowErrorToast(true);
+          setTimeout(() => setShowErrorToast(false), 3000);
+        });
+        
+        // Show toast right away without waiting
+        setShowAddedToast(true);
+        setTimeout(() => setShowAddedToast(false), 3000);
+      }
     } catch (error) {
-      console.error("Error adding to library:", error);
+      console.error("Error with library action:", error);
       setShowErrorToast(true);
       setTimeout(() => setShowErrorToast(false), 3000);
     }
@@ -186,34 +232,43 @@ const VideoPlayerPage = () => {
     if (!isAuthenticated || !user || !contentData) return;
 
     try {
-      addToHistory({
+      // Make sure we're sending proper values, not undefined
+      const historyItem = {
         id: contentId,
-        mediaType,
-        title: mediaType === "movie" 
-          ? movieData?.title 
-          : tvData?.name,
-        posterPath: contentData.poster_path,
+        mediaType: mediaType as "movie" | "tv",
+        title: contentTitle || "Unknown Title",
+        posterPath: contentData.poster_path || "",
         progress: 0,
-        currentSeason: mediaType === "tv" ? currentSeason : undefined,
-        currentEpisode: mediaType === "tv" ? currentEpisode : undefined,
-      });
+        // For TV shows include season and episode, otherwise omit them
+        ...(mediaType === "tv" ? {
+          currentSeason,
+          currentEpisode
+        } : {})
+      };
+      
+      addToHistory(historyItem);
     } catch (error) {
       console.error("Error adding to watch history:", error);
     }
   };
 
-  // Update watch progress
+  // Update progress in watch history
   const handleProgressUpdate = (progress: number) => {
     if (!isAuthenticated || !user || !contentData) return;
 
     try {
-      updateProgress(contentId, {
+      // For TV shows include season and episode, otherwise omit them
+      const updates = {
         progress,
-        currentSeason: mediaType === "tv" ? currentSeason : undefined,
-        currentEpisode: mediaType === "tv" ? currentEpisode : undefined,
-      });
+        ...(mediaType === "tv" ? {
+          currentSeason,
+          currentEpisode
+        } : {})
+      };
+      
+      updateProgress(contentId, updates);
     } catch (error) {
-      console.error("Error updating watch progress:", error);
+      console.error("Error updating progress:", error);
     }
   };
 
@@ -244,7 +299,10 @@ const VideoPlayerPage = () => {
   return (
     <MainLayout>
       {/* Video Player Section */}
-      <div className={`w-full ${focusMode ? "h-screen bg-black" : ""}`}>
+      <div 
+        ref={videoPlayerRef}
+        className={`w-full ${focusMode ? "h-screen bg-black" : ""}`}
+      >
         <VideoPlayer
           contentId={contentId}
           mediaType={mediaType}
@@ -279,21 +337,32 @@ const VideoPlayerPage = () => {
               />
 
               <div className="mt-4 flex flex-col gap-2">
-                      <Button
-                        variant="outline"
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={handleShare}
-                      >
+                >
                   <Share className="mr-2 h-4 w-4" /> Share
-                      </Button>
+                </Button>
 
-                      <WatchRoomButton
-                        contentId={contentId}
-                        mediaType={mediaType}
-                  title={contentTitle || "Content"}
-                />
-                    </div>
-                  </div>
+                <Button 
+                  variant="outline" 
+                  className={`w-full gap-2 ${checkIsInLibrary(contentId, mediaType as "movie" | "tv") ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`} 
+                  onClick={handleLibraryAction}
+                  disabled={!contentId || !mediaType}
+                >
+                  {checkIsInLibrary(contentId, mediaType as "movie" | "tv") ? (
+                    <>
+                      <Check className="h-4 w-4" /> In Library
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" /> Add to Library
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
 
             {/* Right Column - Details and Episodes */}
             <div className="md:col-span-2">
@@ -378,22 +447,22 @@ const VideoPlayerPage = () => {
 
           {/* Toast Notifications */}
           {showAddedToast && (
-            <Toast variant="default">
-              <p>Added to your library!</p>
-            </Toast>
+            <div className="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50">
+              Added to your library!
+            </div>
           )}
 
           {showOfflineToast && (
-            <Toast variant="destructive">
-              <AlertTriangle className="mr-2 h-4 w-4" />
-              <p>You're offline. Please connect to add to library.</p>
-            </Toast>
+            <div className="fixed bottom-6 right-6 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg z-50">
+              <AlertTriangle className="inline-block mr-2 h-4 w-4" />
+              You're offline. Please connect to add to library.
+            </div>
           )}
 
           {showErrorToast && (
-            <Toast variant="destructive">
-              <p>Failed to add to library. Please try again.</p>
-            </Toast>
+            <div className="fixed bottom-6 right-6 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg z-50">
+              Failed to add to library. Please try again.
+            </div>
           )}
         </div>
       )}
