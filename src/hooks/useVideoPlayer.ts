@@ -20,7 +20,7 @@ interface UseVideoPlayerProps {
 export function useVideoPlayer({
   contentId,
   mediaType,
-  initialServerId = "vidsrcDev",
+  initialServerId = "vidsrcXyz",
   seasonNumber,
   episodeNumber,
   title,

@@ -14,14 +14,6 @@ export interface VideoServer {
 
 export const videoServers: VideoServer[] = [
   {
-    id: "vidsrcDev",
-    name: "VidSrc Dev",
-    description: "Server with Watch Party",
-    getEmbedUrl: (contentId, mediaType, seasonNumber, episodeNumber) => {
-      return `https://vidsrc.dev/embed/${mediaType}/${contentId}${mediaType === "tv" && seasonNumber && episodeNumber ? `/${seasonNumber}/${episodeNumber}` : ""}`;
-    },
-  },
-  {
     id: "vidsrcXyz",
     name: "VidSrc XYZ",
     description: "Best for Series",
